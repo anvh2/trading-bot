@@ -13,6 +13,7 @@ require (
 	github.com/markcheno/go-talib v0.0.0-20190307022042-cd53a9264d70
 	github.com/stretchr/testify v1.8.0
 	go.uber.org/zap v1.23.0
+	gopkg.in/telebot.v3 v3.0.0
 )
 
 require (

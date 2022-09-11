@@ -1,0 +1,52 @@
+package notify
+
+import (
+	"context"
+	"time"
+
+	"github.com/anvh2/trading-boy/internal/logger"
+	"go.uber.org/zap"
+	tb "gopkg.in/telebot.v3"
+)
+
+type TelegramBot struct {
+	logger *logger.Logger
+	bot    *tb.Bot
+}
+
+func NewTelegramBot(logger *logger.Logger, token string) (*TelegramBot, error) {
+	setting := tb.Settings{
+		Token: token,
+		Poller: &tb.LongPoller{
+			Timeout: 10 * time.Second,
+		},
+	}
+
+	bot, err := tb.NewBot(setting)
+	if err != nil {
+		logger.Error("failed to new telegram bot", zap.Error(err))
+		return nil, err
+	}
+
+	go bot.Start()
+
+	return &TelegramBot{
+		bot:    bot,
+		logger: logger,
+	}, nil
+}
+
+func (t *TelegramBot) Push(ctx context.Context, chatId int64, message string) error {
+	resp, err := t.bot.Send(&tb.User{ID: 1630847448}, message)
+	if err != nil {
+		t.logger.Error("[TelegramBot] failed to send message", zap.Any("message", message), zap.Error(err))
+		return err
+	}
+
+	t.logger.Info("[TelegramBot] push message success", zap.Any("message", message), zap.Any("messageId", resp.ID))
+	return nil
+}
+
+func (t *TelegramBot) Stop() {
+	t.bot.Stop()
+}

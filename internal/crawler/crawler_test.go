@@ -12,7 +12,9 @@ import (
 )
 
 func TestCrawl(t *testing.T) {
-	crawler := New(logger.NewDev(), &models.ExchangeConfig{}, []string{"BTCUSDT"})
+	logger, _ := logger.New("../../tmp/log.log")
+	crawler := New(logger, &models.ExchangeConfig{}, nil)
+	crawler.symbols = []string{"BTCUSDT", "ETHUSDT"}
 	crawler.Start()
 
 	sigs := make(chan os.Signal, 1)
