@@ -1,10 +1,9 @@
 #!/bin/sh
 #
 # Startup script for Main
-export HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+export HOME=`pwd`
 export APPNAME=`basename $HOME`
 export APPPORT=55000
-cd $HOME
 export CONF=config.yaml
 pid_file=tmp/$APPNAME.pid
 log_file=tmp/$APPNAME.log

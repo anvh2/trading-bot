@@ -2,11 +2,13 @@ package crawler
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/adshao/go-binance/v2"
+	"github.com/anvh2/trading-boy/internal/cache"
 	"github.com/anvh2/trading-boy/internal/logger"
 	"github.com/anvh2/trading-boy/internal/models"
 	"go.uber.org/zap"
@@ -20,42 +22,50 @@ var (
 	intervals = []string{"1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d"}
 )
 
-type Process func(ctx context.Context, message []interface{}) error
+type Process func(ctx context.Context, message *Message) error
+
+type Message struct {
+	Symbol string              `json:"symbol"`
+	Prices map[string][]string `json:"prices"`
+}
 
 type Crawler struct {
 	logger  *logger.Logger
 	binance *binance.Client
 	config  *models.ExchangeConfig
 	symbols []string
-	cache   *Cache
+	cache   *cache.Cache
 	quitCh  chan struct{}
 	process Process
 }
 
 func New(logger *logger.Logger, config *models.ExchangeConfig, process Process) *Crawler {
 	client := binance.NewClient(config.PublicKey, config.SecretKey)
+	cache := cache.NewCache(&cache.Config{CicularSize: limit})
 
 	crawler := &Crawler{
 		logger:  logger,
 		binance: client,
 		config:  config,
-		cache:   NewCache(),
+		cache:   cache,
 		quitCh:  make(chan struct{}),
 		process: process,
 	}
 
 	crawler.WarmUpSymbols()
 
+	// warmup and connect to websocket in background
 	go func() {
 		crawler.WarmUpCache()
 		crawler.Streaming()
+		fmt.Println("Ready to streaming...")
 	}()
 
 	return crawler
 }
 
 func (c *Crawler) Start() {
-	ticker := time.NewTicker(time.Millisecond * 10000)
+	ticker := time.NewTicker(time.Millisecond * 1000)
 
 	go func() {
 		defer func() {
@@ -67,8 +77,19 @@ func (c *Crawler) Start() {
 		for {
 			select {
 			case <-ticker.C:
-				data := c.cache.For("BTCUSDT", "1m").Range()
-				c.process(context.Background(), data)
+				for _, symbol := range c.symbols {
+					message := &Message{
+						Symbol: symbol,
+						Prices: make(map[string][]string),
+					}
+
+					for _, interval := range intervals {
+						prices := c.cache.For(symbol, interval).Range()
+						message.Prices[interval] = prices
+					}
+
+					go c.process(context.Background(), message)
+				}
 
 			case <-c.quitCh:
 				return

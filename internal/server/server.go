@@ -15,6 +15,7 @@ import (
 )
 
 type Server struct {
+	logger  *logger.Logger
 	config  *models.BotConfig
 	crawler *crawler.Crawler
 	notify  *notify.TelegramBot
@@ -32,6 +33,7 @@ func NewServer(config *models.BotConfig) *Server {
 	}
 
 	server := &Server{
+		logger: logger,
 		config: config,
 		notify: notifyBot,
 	}
