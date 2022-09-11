@@ -35,7 +35,8 @@ type Crawler struct {
 	config  *models.ExchangeConfig
 	symbols []string
 	cache   *cache.Cache
-	quitCh  chan struct{}
+	quit    chan struct{}
+	ready   chan bool
 	process Process
 }
 
@@ -48,7 +49,8 @@ func New(logger *logger.Logger, config *models.ExchangeConfig, process Process) 
 		binance: client,
 		config:  config,
 		cache:   cache,
-		quitCh:  make(chan struct{}),
+		quit:    make(chan struct{}),
+		ready:   make(chan bool),
 		process: process,
 	}
 
@@ -59,6 +61,7 @@ func New(logger *logger.Logger, config *models.ExchangeConfig, process Process) 
 		crawler.WarmUpCache()
 		crawler.Streaming()
 		fmt.Println("Ready to streaming...")
+		crawler.ready <- true
 	}()
 
 	return crawler
@@ -73,6 +76,8 @@ func (c *Crawler) Start() {
 				c.logger.Error("[Crawler] failed to start, recovered", zap.Any("error", r))
 			}
 		}()
+
+		<-c.ready
 
 		for {
 			select {
@@ -91,7 +96,7 @@ func (c *Crawler) Start() {
 					go c.process(context.Background(), message)
 				}
 
-			case <-c.quitCh:
+			case <-c.quit:
 				return
 			}
 		}
@@ -99,7 +104,7 @@ func (c *Crawler) Start() {
 }
 
 func (c *Crawler) Stop() {
-	close(c.quitCh)
+	close(c.quit)
 }
 
 func (c *Crawler) WarmUpSymbols() error {
