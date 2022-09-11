@@ -3,7 +3,7 @@ package binance
 import (
 	"context"
 
-	"github.com/anvh2/trading-boy/models"
+	"github.com/anvh2/trading-boy/internal/models"
 )
 
 func (bw *BinanceWrapper) CalculateTradingFees(ctx context.Context, market *models.Market, amount float64, limit float64, orderType TradeType) float64 {

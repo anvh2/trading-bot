@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/adshao/go-binance/v2/futures"
-	"github.com/anvh2/trading-boy/logger"
-	"github.com/anvh2/trading-boy/models"
+	"github.com/anvh2/trading-boy/internal/logger"
+	"github.com/anvh2/trading-boy/internal/models"
 	"go.uber.org/zap"
 )
 

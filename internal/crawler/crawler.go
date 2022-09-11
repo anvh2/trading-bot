@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/adshao/go-binance/v2"
-	"github.com/anvh2/trading-boy/cache/circular"
-	"github.com/anvh2/trading-boy/logger"
-	"github.com/anvh2/trading-boy/models"
+	"github.com/anvh2/trading-boy/internal/cache/circular"
+	"github.com/anvh2/trading-boy/internal/logger"
+	"github.com/anvh2/trading-boy/internal/models"
 	"github.com/markcheno/go-talib"
 	"go.uber.org/zap"
 )

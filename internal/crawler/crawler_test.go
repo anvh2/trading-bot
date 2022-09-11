@@ -7,8 +7,8 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/anvh2/trading-boy/logger"
-	"github.com/anvh2/trading-boy/models"
+	"github.com/anvh2/trading-boy/internal/logger"
+	"github.com/anvh2/trading-boy/internal/models"
 )
 
 func TestCrawl(t *testing.T) {

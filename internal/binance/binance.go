@@ -2,7 +2,7 @@ package binance
 
 import (
 	"github.com/adshao/go-binance/v2"
-	"github.com/anvh2/trading-boy/logger"
+	"github.com/anvh2/trading-boy/internal/logger"
 )
 
 // BinanceWrapper represents the wrapper for the Binance exchange.

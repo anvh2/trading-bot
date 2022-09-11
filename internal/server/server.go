@@ -7,9 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/anvh2/trading-boy/binance"
-	"github.com/anvh2/trading-boy/logger"
-	"github.com/anvh2/trading-boy/models"
+	"github.com/anvh2/trading-boy/internal/binance"
+	"github.com/anvh2/trading-boy/internal/logger"
+	"github.com/anvh2/trading-boy/internal/models"
 )
 
 type Server struct {

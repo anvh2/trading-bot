@@ -3,7 +3,7 @@ package binance
 import (
 	"context"
 
-	"github.com/anvh2/trading-boy/models"
+	"github.com/anvh2/trading-boy/internal/models"
 	"github.com/shopspring/decimal"
 )
 
