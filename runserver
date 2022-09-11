@@ -1,0 +1,59 @@
+#!/bin/sh
+#
+# Startup script for Main
+export HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+export APPNAME=`basename $HOME`
+export APPPORT=55000
+cd $HOME
+export CONF=config.yaml
+pid_file=tmp/$APPNAME.pid
+log_file=tmp/$APPNAME.log
+
+# Arguments to pass to the service
+PARAMS=" start \
+        --config $CONF"
+
+is_running () {
+    [ -f "$pid_file" ] && ps `cat $pid_file` > /dev/null 2>&1
+}
+
+case "$1" in
+    start)
+        # Main startup
+        echo -n "Starting $APPNAME (port $APPPORT): "
+        exec ./$APPNAME $PARAMS > $log_file 2>&1 &
+        [ ! -z $pid_file ] && echo $! > $pid_file
+        echo "OK"
+        ;;
+    stop)
+        # Main shutdown
+        if ! is_running; then
+            echo "Service stopped"
+            exit 1
+        fi
+        echo -n "Shutdown $APPNAME (port $APPPORT): "
+        while is_running;
+        do
+            kill `cat $pid_file`
+            sleep 1
+        done
+        echo "OK"
+        ;;
+    reload|restart)
+    $0 stop
+        $0 start
+        ;;
+    status)
+        if is_running; then
+            echo -n "Service is running. Pid: "
+            echo `cat $pid_file`
+        else
+            echo "Service stopped"
+        fi
+        ;;
+    *)
+        echo "Usage: `basename $0` start|stop|restart|reload"
+        exit 1
+esac
+
+exit 0

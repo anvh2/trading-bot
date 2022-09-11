@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package v1.bot.api;
+
+option go_package = "api/v1/bot;botapi";
+
+service TrandingService {
+ 
+}
