@@ -40,10 +40,6 @@ func (s *Server) ProcessData(ctx context.Context, message *models.CandlestickCha
 	}
 
 	for interval, candles := range message.Candlesticks {
-		if len(candles) < 500 {
-			return errors.New("candlesticks not enough")
-		}
-
 		inLow := make([]float64, len(candles))
 		inHight := make([]float64, len(candles))
 		inClose := make([]float64, len(candles))
