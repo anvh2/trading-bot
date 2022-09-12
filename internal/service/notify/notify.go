@@ -37,7 +37,7 @@ func NewTelegramBot(logger *logger.Logger, token string) (*TelegramBot, error) {
 }
 
 func (t *TelegramBot) Push(ctx context.Context, chatId int64, message string) error {
-	resp, err := t.bot.Send(&tb.User{ID: 1630847448}, message)
+	resp, err := t.bot.Send(&tb.User{ID: chatId}, message)
 	if err != nil {
 		t.logger.Error("[TelegramBot] failed to send message", zap.Any("message", message), zap.Error(err))
 		return err

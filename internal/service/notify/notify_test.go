@@ -15,5 +15,5 @@ func TestSend(t *testing.T) {
 		return
 	}
 
-	bot.Push(context.Background(), 1630847448, "hello world")
+	bot.Push(context.Background(), -653827904, "hello world")
 }

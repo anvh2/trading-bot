@@ -16,6 +16,10 @@ const (
 	inTimePeriod int = 14
 )
 
+const (
+	groupChatId int64 = -653827904
+)
+
 var (
 	sortedInterval  = []string{"5m", "15m", "30m", "1h", "4h", "1d"}
 	focusedInterval = map[string]bool{"5m": true, "15m": true, "30m": true, "1h": true, "4h": true, "1d": true}
@@ -27,6 +31,10 @@ func (s *Server) ProcessCrawlerMessage(ctx context.Context, message *crawler.Mes
 			s.logger.Error("[ProcessCrawlerMessage] process message failed", zap.Any("error", r))
 		}
 	}()
+
+	if len(message.CandleSticks) == 0 {
+		return nil
+	}
 
 	oscillator := &models.Oscillator{
 		Symbol: message.Symbol,
@@ -82,7 +90,7 @@ func (s *Server) ProcessCrawlerMessage(ctx context.Context, message *crawler.Mes
 		msg += fmt.Sprintf("\t%03s:\t RSI %2.2f | K %02.2f | D %02.2f\n", strings.ToUpper(interval), stoch.RSI, stoch.SlowK, stoch.SlowD)
 	}
 
-	return s.notify.Push(ctx, 1630847448, msg)
+	return s.notify.Push(ctx, groupChatId, msg)
 }
 
 func isReadyToTrade(oscillator *models.Oscillator) bool {

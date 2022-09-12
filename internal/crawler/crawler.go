@@ -19,7 +19,8 @@ const (
 )
 
 var (
-	intervals = []string{"1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d"}
+	// "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d"
+	intervals = []string{"5m", "15m", "30m", "1h", "4h", "1d"}
 )
 
 type Process func(ctx context.Context, message *Message) error
@@ -99,7 +100,9 @@ func (c *Crawler) Start() {
 							}
 						}
 
-						message.CandleSticks[interval] = candleSticks
+						if len(candleSticks) > 0 {
+							message.CandleSticks[interval] = candleSticks
+						}
 					}
 
 					go c.process(context.Background(), message)
