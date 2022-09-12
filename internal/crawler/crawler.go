@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/adshao/go-binance/v2"
-	"github.com/anvh2/trading-boy/internal/cache"
-	"github.com/anvh2/trading-boy/internal/logger"
-	"github.com/anvh2/trading-boy/internal/models"
+	"github.com/anvh2/trading-bot/internal/cache"
+	"github.com/anvh2/trading-bot/internal/logger"
+	"github.com/anvh2/trading-bot/internal/models"
 	"go.uber.org/zap"
 )
 
@@ -25,8 +25,8 @@ var (
 type Process func(ctx context.Context, message *Message) error
 
 type Message struct {
-	Symbol string              `json:"symbol"`
-	Prices map[string][]string `json:"prices"`
+	Symbol       string                           `json:"symbol"`
+	CandleSticks map[string][]*models.CandleStick `json:"candle_sticks"`
 }
 
 type Crawler struct {
@@ -84,13 +84,22 @@ func (c *Crawler) Start() {
 			case <-ticker.C:
 				for _, symbol := range c.symbols {
 					message := &Message{
-						Symbol: symbol,
-						Prices: make(map[string][]string),
+						Symbol:       symbol,
+						CandleSticks: make(map[string][]*models.CandleStick),
 					}
 
 					for _, interval := range intervals {
-						prices := c.cache.For(symbol, interval).Range()
-						message.Prices[interval] = prices
+						candleStickData := c.cache.For(symbol, interval).Range()
+						candleSticks := make([]*models.CandleStick, len(candleStickData))
+
+						for idx, candleStick := range candleStickData {
+							result, ok := candleStick.(*models.CandleStick)
+							if ok {
+								candleSticks[idx] = result
+							}
+						}
+
+						message.CandleSticks[interval] = candleSticks
 					}
 
 					go c.process(context.Background(), message)
@@ -150,10 +159,15 @@ func (c *Crawler) WarmUpCache() error {
 				}
 
 				for _, e := range resp {
-					c.cache.For(symbol, interval).Set(e.Close)
+					candle := &models.CandleStick{
+						Low:   e.Low,
+						High:  e.High,
+						Close: e.Close,
+					}
+
+					c.cache.For(symbol, interval).Set(candle)
 				}
 
-				c.logger.Info("[WarmUpCache] warm up success", zap.String("symbol", symbol), zap.String("interval", interval))
 				time.Sleep(time.Millisecond * 500) // TODO: temporary rate limit for calling binance api, default allow 1200 per minute
 			}
 		}(interval)
@@ -193,7 +207,12 @@ func (c *Crawler) Streaming() error {
 }
 
 func (c *Crawler) handleKlinesStreamData(event *binance.WsKlineEvent) {
-	c.cache.For(event.Symbol, event.Kline.Interval).Set(event.Kline.Close)
+	candle := &models.CandleStick{
+		Low:   event.Kline.Low,
+		High:  event.Kline.High,
+		Close: event.Kline.Close,
+	}
+	c.cache.For(event.Symbol, event.Kline.Interval).Set(candle)
 }
 
 func (c *Crawler) handleKlinesStreamError(err error) {

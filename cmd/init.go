@@ -21,7 +21,7 @@ import (
 
 	yaml "gopkg.in/yaml.v2"
 
-	"github.com/anvh2/trading-boy/internal/models"
+	"github.com/anvh2/trading-bot/internal/models"
 	"github.com/spf13/cobra"
 )
 

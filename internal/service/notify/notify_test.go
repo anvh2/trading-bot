@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/anvh2/trading-boy/internal/logger"
+	"github.com/anvh2/trading-bot/internal/logger"
 )
 
 func TestSend(t *testing.T) {

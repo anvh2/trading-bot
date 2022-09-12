@@ -7,7 +7,7 @@ import (
 type Cache struct {
 	idx      int32
 	size     int32
-	internal map[int32]string
+	internal map[int32]interface{}
 	mutex    *sync.RWMutex
 }
 
@@ -15,12 +15,12 @@ func New(size int32) *Cache {
 	return &Cache{
 		idx:      0,
 		size:     size,
-		internal: make(map[int32]string, size),
+		internal: make(map[int32]interface{}, size),
 		mutex:    &sync.RWMutex{},
 	}
 }
 
-func (l *Cache) Set(data string) error {
+func (l *Cache) Set(data interface{}) error {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
@@ -34,11 +34,11 @@ func (l *Cache) Set(data string) error {
 	return nil
 }
 
-func (l *Cache) Range() []string {
+func (l *Cache) Range() []interface{} {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
 
-	data := make([]string, l.size)
+	data := make([]interface{}, l.size)
 	for idx, val := range l.internal {
 		data[idx] = val
 	}
@@ -46,12 +46,12 @@ func (l *Cache) Range() []string {
 	return data
 }
 
-func (l *Cache) RangeWithASC() []string {
+func (l *Cache) RangeWithASC() []interface{} {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
 
 	idx := 0
-	data := make([]string, l.size)
+	data := make([]interface{}, l.size)
 
 	for i := l.idx - 1; i < l.size; i++ {
 		data[idx] = l.internal[i]

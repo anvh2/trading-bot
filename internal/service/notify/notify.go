@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/anvh2/trading-boy/internal/logger"
+	"github.com/anvh2/trading-bot/internal/logger"
 	"go.uber.org/zap"
 	tb "gopkg.in/telebot.v3"
 )

@@ -1,7 +1,7 @@
 package main
 
 import (
-	bot "github.com/anvh2/trading-boy/cmd"
+	bot "github.com/anvh2/trading-bot/cmd"
 )
 
 const (

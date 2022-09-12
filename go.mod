@@ -1,4 +1,4 @@
-module github.com/anvh2/trading-boy
+module github.com/anvh2/trading-bot
 
 go 1.17
 
@@ -10,6 +10,7 @@ require (
 )
 
 require (
+	github.com/go-redis/redis/v8 v8.11.5
 	github.com/markcheno/go-talib v0.0.0-20190307022042-cd53a9264d70
 	github.com/stretchr/testify v1.8.0
 	go.uber.org/zap v1.23.0
@@ -18,7 +19,9 @@ require (
 
 require (
 	github.com/bitly/go-simplejson v0.5.0 // indirect
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect

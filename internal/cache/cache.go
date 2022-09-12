@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/anvh2/trading-boy/internal/cache/circular"
+	"github.com/anvh2/trading-bot/internal/cache/circular"
 )
 
 type Config struct {

@@ -3,7 +3,7 @@ package binance
 import (
 	"context"
 
-	"github.com/anvh2/trading-boy/internal/models"
+	"github.com/anvh2/trading-bot/internal/models"
 	"github.com/shopspring/decimal"
 )
 
@@ -16,18 +16,12 @@ func (bw *BinanceWrapper) GetCandles(ctx context.Context, market *models.Market)
 	ret := make([]models.CandleStick, len(binanceCandles))
 
 	for i, binanceCandle := range binanceCandles {
-		high, _ := decimal.NewFromString(binanceCandle.High)
-		open, _ := decimal.NewFromString(binanceCandle.Open)
-		close, _ := decimal.NewFromString(binanceCandle.Close)
-		low, _ := decimal.NewFromString(binanceCandle.Low)
-		volume, _ := decimal.NewFromString(binanceCandle.Volume)
-
 		ret[i] = models.CandleStick{
-			High:   high,
-			Open:   open,
-			Close:  close,
-			Low:    low,
-			Volume: volume,
+			High:   binanceCandle.High,
+			Open:   binanceCandle.Open,
+			Close:  binanceCandle.Close,
+			Low:    binanceCandle.Low,
+			Volume: binanceCandle.Volume,
 		}
 	}
 

@@ -19,8 +19,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/anvh2/trading-boy/internal/models"
-	"github.com/anvh2/trading-boy/internal/server"
+	"github.com/anvh2/trading-bot/internal/models"
+	"github.com/anvh2/trading-bot/internal/server"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
