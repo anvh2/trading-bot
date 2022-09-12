@@ -19,7 +19,7 @@ const (
 
 //Exchange provides a generic wrapper for exchange services.
 type Exchange interface {
-	GetCandles(ctx context.Context, market *models.Market) ([]models.CandleStick, error)        // Gets the candle data from the exchange.
+	GetCandles(ctx context.Context, market *models.Market) ([]models.Candlestick, error)        // Gets the candle data from the exchange.
 	GetMarketSummary(ctx context.Context, market *models.Market) (*models.MarketSummary, error) // Gets the current market summary.
 	GetOrderBook(ctx context.Context, market *models.Market) (*models.OrderBook, error)         // Gets the order(ASK + BID) book of a market.
 

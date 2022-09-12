@@ -35,7 +35,7 @@ var startCmd = &cobra.Command{
 			return err
 		}
 
-		srv := server.NewServer(&botConfig)
+		srv := server.NewServer(botConfig.ExchangeConfig)
 		return srv.Start()
 	},
 }

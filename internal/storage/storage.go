@@ -21,7 +21,7 @@ var (
 )
 
 var (
-	keyOscillatorData string = "trading_boy.oscillator_data.%s"
+	keyOscillatorData string = "trading_bot.oscillator_indicator.%s"
 )
 
 type Storage struct {

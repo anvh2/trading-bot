@@ -12,10 +12,11 @@ type Config struct {
 }
 
 type Cache struct {
-	mutex  *sync.Mutex
-	cache  map[string]*circular.Cache // map[symbol-interval]close_prices
-	config *Config
-	key    func(val1, val2 string) string
+	mutex   *sync.Mutex
+	symbols []string
+	candles map[string]*circular.Cache // map[symbol-interval]close_prices
+	config  *Config
+	key     func(val1, val2 string) string
 }
 
 func NewCache(config *Config) *Cache {
@@ -26,22 +27,30 @@ func NewCache(config *Config) *Cache {
 	}
 
 	return &Cache{
-		mutex:  &sync.Mutex{},
-		cache:  make(map[string]*circular.Cache),
-		config: config,
+		mutex:   &sync.Mutex{},
+		candles: make(map[string]*circular.Cache),
+		config:  config,
 		key: func(symbol, interval string) string {
 			return fmt.Sprintf("%s-%s", symbol, interval)
 		},
 	}
 }
 
-func (c *Cache) For(symbol, interval string) *circular.Cache {
+func (c *Cache) SetSymbols(symbols []string) {
+	c.symbols = symbols
+}
+
+func (c *Cache) Symbols() []string {
+	return c.symbols
+}
+
+func (c *Cache) Candlestick(symbol, interval string) *circular.Cache {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	if c.cache[c.key(symbol, interval)] == nil {
-		c.cache[c.key(symbol, interval)] = circular.New(c.config.CicularSize)
+	if c.candles[c.key(symbol, interval)] == nil {
+		c.candles[c.key(symbol, interval)] = circular.New(c.config.CicularSize)
 	}
 
-	return c.cache[c.key(symbol, interval)]
+	return c.candles[c.key(symbol, interval)]
 }

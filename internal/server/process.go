@@ -2,11 +2,12 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
-	"github.com/anvh2/trading-bot/internal/crawler"
+	"github.com/anvh2/trading-bot/internal/config"
 	"github.com/anvh2/trading-bot/internal/models"
 	"github.com/markcheno/go-talib"
 	"go.uber.org/zap"
@@ -20,20 +21,17 @@ const (
 	groupChatId int64 = -653827904
 )
 
-var (
-	sortedInterval  = []string{"5m", "15m", "30m", "1h", "4h", "1d"}
-	focusedInterval = map[string]bool{"5m": true, "15m": true, "30m": true, "1h": true, "4h": true, "1d": true}
-)
-
-func (s *Server) ProcessCrawlerMessage(ctx context.Context, message *crawler.Message) error {
+func (s *Server) ProcessData(ctx context.Context, message *models.CandlestickChart) error {
 	defer func() {
 		if r := recover(); r != nil {
-			s.logger.Error("[ProcessCrawlerMessage] process message failed", zap.Any("error", r))
+			s.logger.Error("[ProcessData] process message failed", zap.Any("error", r))
 		}
 	}()
 
-	if len(message.CandleSticks) == 0 {
-		return nil
+	if message == nil ||
+		message.Candlesticks == nil ||
+		len(message.Candlesticks) == 0 {
+		return errors.New("message invalid")
 	}
 
 	oscillator := &models.Oscillator{
@@ -41,9 +39,9 @@ func (s *Server) ProcessCrawlerMessage(ctx context.Context, message *crawler.Mes
 		Stoch:  make(map[string]*models.Stoch),
 	}
 
-	for interval, candles := range message.CandleSticks {
-		if !focusedInterval[interval] {
-			continue
+	for interval, candles := range message.Candlesticks {
+		if len(candles) < 500 {
+			return errors.New("candlesticks not enough")
 		}
 
 		inLow := make([]float64, len(candles))
@@ -75,19 +73,22 @@ func (s *Server) ProcessCrawlerMessage(ctx context.Context, message *crawler.Mes
 	}
 
 	if !isReadyToTrade(oscillator) {
-		return nil
-	}
-
-	if err := s.storage.SetNXOscillator(ctx, oscillator); err != nil {
-		s.logger.Info("[ProcessCrawlerMessage] already send notification", zap.Any("oscillator", oscillator), zap.Error(err))
-		return nil
+		return errors.New("not ready to trade")
 	}
 
 	msg := fmt.Sprintf("%s\n", message.Symbol)
 
-	for _, interval := range sortedInterval {
-		stoch := oscillator.Stoch[interval]
+	for _, interval := range config.Intervals {
+		stoch, ok := oscillator.Stoch[interval]
+		if !ok {
+			return errors.New("stoch in interval invalid")
+		}
+
 		msg += fmt.Sprintf("\t%03s:\t RSI %2.2f | K %02.2f | D %02.2f\n", strings.ToUpper(interval), stoch.RSI, stoch.SlowK, stoch.SlowD)
+	}
+
+	if err := s.storage.SetNXOscillator(ctx, oscillator); err != nil {
+		return err
 	}
 
 	return s.notify.Push(ctx, groupChatId, msg)

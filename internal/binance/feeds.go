@@ -7,16 +7,16 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (bw *BinanceWrapper) GetCandles(ctx context.Context, market *models.Market) ([]models.CandleStick, error) {
+func (bw *BinanceWrapper) GetCandles(ctx context.Context, market *models.Market) ([]models.Candlestick, error) {
 	binanceCandles, err := bw.api.NewKlinesService().Interval("30m").Symbol(market.MarketName).Do(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	ret := make([]models.CandleStick, len(binanceCandles))
+	ret := make([]models.Candlestick, len(binanceCandles))
 
 	for i, binanceCandle := range binanceCandles {
-		ret[i] = models.CandleStick{
+		ret[i] = models.Candlestick{
 			High:   binanceCandle.High,
 			Open:   binanceCandle.Open,
 			Close:  binanceCandle.Close,
