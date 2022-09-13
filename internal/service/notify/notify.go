@@ -2,6 +2,7 @@ package notify
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/anvh2/trading-bot/internal/logger"
@@ -34,6 +35,22 @@ func NewTelegramBot(logger *logger.Logger, token string) (*TelegramBot, error) {
 		bot:    bot,
 		logger: logger,
 	}, nil
+}
+
+func (t *TelegramBot) Handle(command string, handler func() (interface{}, error)) {
+	t.bot.Handle(command, func(ctx tb.Context) error {
+		resp, err := handler()
+		if err != nil {
+			return err
+		}
+
+		bytes, err := json.Marshal(resp)
+		if err != nil {
+			return err
+		}
+
+		return ctx.Send(string(bytes))
+	})
 }
 
 func (t *TelegramBot) Push(ctx context.Context, chatId int64, message string) error {

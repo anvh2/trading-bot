@@ -13,14 +13,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	inTimePeriod int = 14
-)
-
-const (
-	groupChatId int64 = -653827904
-)
-
 func (s *Server) ProcessData(ctx context.Context, message *models.CandlestickChart) error {
 	defer func() {
 		if r := recover(); r != nil {
@@ -56,7 +48,7 @@ func (s *Server) ProcessData(ctx context.Context, message *models.CandlestickCha
 		}
 
 		slowK, slowD := talib.Stoch(inHight, inLow, inClose, 12, 3, talib.SMA, 3, talib.SMA)
-		result := talib.Rsi(inClose, inTimePeriod)
+		result := talib.Rsi(inClose, config.RSIPeriodTime)
 		rsi := result[len(result)-1]
 
 		stoch := &models.Stoch{
@@ -87,7 +79,7 @@ func (s *Server) ProcessData(ctx context.Context, message *models.CandlestickCha
 		return err
 	}
 
-	return s.notify.Push(ctx, groupChatId, msg)
+	return s.notify.Push(ctx, config.GroupChatId, msg)
 }
 
 func isReadyToTrade(oscillator *models.Oscillator) bool {

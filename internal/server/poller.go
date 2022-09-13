@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"github.com/anvh2/trading-bot/internal/config"
@@ -41,6 +42,10 @@ func (s *Server) polling() {
 						}
 
 						if len(candleSticks) > 0 {
+							sort.Slice(candleSticks, func(i, j int) bool {
+								return candleSticks[i].OpenTime < candleSticks[j].OpenTime
+							})
+
 							message.Candlesticks[interval] = candleSticks
 						}
 					}

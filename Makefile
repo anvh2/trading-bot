@@ -11,7 +11,7 @@ build: clean go-vendor
 	GOOS=linux go build -o $(BIN)
 
 rsync:
-	rsync -avz $(BIN) config.* runserver root@165.22.103.161:/server/$(BIN)/
+	rsync -avz $(BIN) config.* root@165.22.103.161:/server/$(BIN)/
 
 deploy: build rsync
 	ssh root@165.22.103.161 sh /server/$(BIN)/runserver restart

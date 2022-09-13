@@ -40,13 +40,33 @@ func (l *Cache) Set(data interface{}) error {
 	return nil
 }
 
-func (l *Cache) Range() []interface{} {
+func (l *Cache) Get() []interface{} {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
 
 	data := make([]interface{}, l.len)
 	for i := int32(0); i < l.len; i++ {
 		data[i] = l.internal[i]
+	}
+
+	return data
+}
+
+func (l *Cache) Range() []interface{} {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
+
+	idx := 0
+	data := make([]interface{}, l.len)
+
+	for i := l.idx; i < l.len; i++ {
+		data[idx] = l.internal[i]
+		idx++
+	}
+
+	for i := int32(0); i < l.idx; i++ {
+		data[idx] = l.internal[i]
+		idx++
 	}
 
 	return data

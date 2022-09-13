@@ -15,10 +15,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	limit int32 = 500
-)
-
 type Crawler struct {
 	logger  *logger.Logger
 	binance *binance.Client
@@ -68,7 +64,7 @@ func (c *Crawler) WarmUpSymbols() error {
 		}
 	}
 
-	c.cache.SetSymbols(selected)
+	c.cache.Set(selected)
 	c.logger.Info("[Crawler][WarmUpSymbols] warm up symbols success", zap.Int("total", len(selected)))
 	return nil
 }
@@ -92,7 +88,7 @@ func (c *Crawler) WarmUpCache() error {
 				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 				defer cancel()
 
-				resp, err := c.binance.NewKlinesService().Symbol(symbol).Interval(interval).Limit(int(limit)).Do(ctx)
+				resp, err := c.binance.NewKlinesService().Symbol(symbol).Interval(interval).Limit(int(config.CandleSize)).Do(ctx)
 				if err != nil {
 					c.logger.Error("[Crawler][WarmUpCache] failed to get klines data", zap.String("symbol", symbol), zap.String("interval", interval), zap.Error(err))
 					return
@@ -100,9 +96,10 @@ func (c *Crawler) WarmUpCache() error {
 
 				for _, e := range resp {
 					candle := &models.Candlestick{
-						Low:   e.Low,
-						High:  e.High,
-						Close: e.Close,
+						Low:      e.Low,
+						High:     e.High,
+						Close:    e.Close,
+						OpenTime: e.OpenTime,
 					}
 
 					c.cache.Candlestick(symbol, interval).Set(candle)
@@ -150,9 +147,10 @@ func (c *Crawler) Streaming() error {
 
 func (c *Crawler) handleKlinesStreamData(event *binance.WsKlineEvent) {
 	candle := &models.Candlestick{
-		Low:   event.Kline.Low,
-		High:  event.Kline.High,
-		Close: event.Kline.Close,
+		Low:      event.Kline.Low,
+		High:     event.Kline.High,
+		Close:    event.Kline.Close,
+		OpenTime: event.Kline.StartTime,
 	}
 	c.cache.Candlestick(event.Symbol, event.Kline.Interval).Set(candle)
 }

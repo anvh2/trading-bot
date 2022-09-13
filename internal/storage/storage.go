@@ -45,7 +45,6 @@ func (s *Storage) SetNXOscillator(ctx context.Context, data *models.Oscillator) 
 	}
 
 	if !effected {
-		s.logger.Error("[Storage][SetNXOscillator] oscillator is alreay exist to redis", zap.Any("data", data))
 		return ErrOscillatorIsAlreadyExist
 	}
 

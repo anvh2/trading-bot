@@ -14,7 +14,7 @@ type Config struct {
 type Cache struct {
 	mutex   *sync.Mutex
 	symbols []string
-	candles map[string]*circular.Cache // map[symbol-interval]close_prices
+	candles map[string]*circular.Cache // map[symbol-interval]candle
 	config  *Config
 	key     func(val1, val2 string) string
 }
@@ -36,7 +36,7 @@ func NewCache(config *Config) *Cache {
 	}
 }
 
-func (c *Cache) SetSymbols(symbols []string) {
+func (c *Cache) Set(symbols []string) {
 	c.symbols = symbols
 }
 
