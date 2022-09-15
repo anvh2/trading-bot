@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/anvh2/trading-bot/internal/config"
 	"github.com/anvh2/trading-bot/internal/models"
@@ -13,10 +15,10 @@ import (
 	"go.uber.org/zap"
 )
 
-func (s *Server) ProcessData(ctx context.Context, message *models.CandlestickChart) error {
+func (s *Server) ProcessData(ctx context.Context, message *models.CandlesMarket) error {
 	defer func() {
 		if r := recover(); r != nil {
-			s.logger.Error("[ProcessData] process message failed", zap.Any("error", r))
+			s.logger.Error("[ProcessData] process message failed", zap.String("symbol", message.Symbol), zap.Any("error", r), zap.String("stacktrace", string(debug.Stack())))
 		}
 	}()
 
@@ -47,8 +49,10 @@ func (s *Server) ProcessData(ctx context.Context, message *models.CandlestickCha
 			inClose[idx] = close
 		}
 
-		slowK, slowD := talib.Stoch(inHight, inLow, inClose, 12, 3, talib.SMA, 3, talib.SMA)
-		result := talib.Rsi(inClose, config.RSIPeriodTime)
+		stochSettings := config.StochSettings[config.StochShortTerm]
+
+		slowK, slowD := talib.Stoch(inHight, inLow, inClose, stochSettings.FastKPeriod, stochSettings.SlowKPeriod, talib.SMA, stochSettings.SlowDPeriod, talib.SMA)
+		result := talib.Rsi(inClose, config.RSIPeriod)
 		rsi := result[len(result)-1]
 
 		stoch := &models.Stoch{
@@ -64,7 +68,7 @@ func (s *Server) ProcessData(ctx context.Context, message *models.CandlestickCha
 		return errors.New("not ready to trade")
 	}
 
-	msg := fmt.Sprintf("%s\n", message.Symbol)
+	msg := fmt.Sprintf("%s\t\t latency: +%d(ms)\n", message.Symbol, time.Now().UnixMilli()-message.UpdateTime)
 
 	for _, interval := range config.Intervals {
 		stoch, ok := oscillator.Stoch[interval]
@@ -79,7 +83,7 @@ func (s *Server) ProcessData(ctx context.Context, message *models.CandlestickCha
 		return err
 	}
 
-	return s.notify.Push(ctx, config.GroupChatId, msg)
+	return s.notify.Push(ctx, config.TelegramChatId, msg)
 }
 
 func isReadyToTrade(oscillator *models.Oscillator) bool {

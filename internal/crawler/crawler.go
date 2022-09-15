@@ -3,6 +3,7 @@ package crawler
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -60,11 +61,14 @@ func (c *Crawler) WarmUpSymbols() error {
 
 	for _, symbol := range resp.Symbols {
 		if strings.Contains(symbol.Symbol, "USDT") {
+			if symbol.Symbol == "LUNCUSDT" { // TODO: LUNC not enough data yet
+				continue
+			}
 			selected = append(selected, symbol.Symbol)
 		}
 	}
 
-	c.cache.Set(selected)
+	c.cache.SetSymbols(selected)
 	c.logger.Info("[Crawler][WarmUpSymbols] warm up symbols success", zap.Int("total", len(selected)))
 	return nil
 }
@@ -78,7 +82,7 @@ func (c *Crawler) WarmUpCache() error {
 		go func(interval string) {
 			defer func() {
 				if r := recover(); r != nil {
-					c.logger.Error("[Crawler][WarmUpCache] failed to start, recovered", zap.Any("error", r))
+					c.logger.Error("[Crawler][WarmUpCache] failed to start, recovered", zap.Any("error", r), zap.String("stacktrace", string(debug.Stack())))
 				}
 			}()
 
@@ -96,17 +100,17 @@ func (c *Crawler) WarmUpCache() error {
 
 				for _, e := range resp {
 					candle := &models.Candlestick{
-						Low:      e.Low,
-						High:     e.High,
-						Close:    e.Close,
-						OpenTime: e.OpenTime,
+						OpenTime:  e.OpenTime,
+						CloseTime: e.CloseTime,
+						Low:       e.Low,
+						High:      e.High,
+						Close:     e.Close,
 					}
 
-					c.cache.Candlestick(symbol, interval).Set(candle)
+					c.cache.Market(symbol).CreateCandle(interval, candle)
 				}
 
-				c.logger.Info("[Crawler][WarmUpCache] success", zap.String("symbol", symbol), zap.Int("total", len(resp)))
-
+				c.logger.Info("[Crawler][WarmUpCache] success", zap.String("symbol", symbol), zap.String("interval", interval), zap.Int("total", len(resp)))
 				time.Sleep(time.Millisecond * 500) // TODO: temporary rate limit for calling binance api, default allow 1200 per minute
 			}
 		}(interval)
@@ -126,7 +130,7 @@ func (c *Crawler) Streaming() error {
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					c.logger.Error("[Crawler][Streaming] failed to start, recovered", zap.Any("error", r))
+					c.logger.Error("[Crawler][Streaming] failed to start, recovered", zap.Any("error", r), zap.String("stacktrace", string(debug.Stack())))
 				}
 			}()
 
@@ -146,13 +150,43 @@ func (c *Crawler) Streaming() error {
 }
 
 func (c *Crawler) handleKlinesStreamData(event *binance.WsKlineEvent) {
-	candle := &models.Candlestick{
-		Low:      event.Kline.Low,
-		High:     event.Kline.High,
-		Close:    event.Kline.Close,
-		OpenTime: event.Kline.StartTime,
+	market := c.cache.Market(event.Symbol)
+	candles := market.Candles(event.Kline.Interval)
+	if candles == nil {
+		return
 	}
-	c.cache.Candlestick(event.Symbol, event.Kline.Interval).Set(candle)
+
+	last, idx := candles.Last()
+	if idx < 0 {
+		return
+	}
+
+	lastCandle, ok := last.(*models.Candlestick)
+	if !ok {
+		return
+	}
+
+	// update last candle
+	if lastCandle.OpenTime == event.Kline.StartTime &&
+		lastCandle.CloseTime == event.Kline.EndTime {
+
+		lastCandle.Close = event.Kline.Close
+
+		candles.Update(idx, lastCandle)
+		market.UpdateMeta()
+		return
+	}
+
+	// create new candle
+	candle := &models.Candlestick{
+		OpenTime:  event.Kline.StartTime,
+		CloseTime: event.Kline.EndTime,
+		Low:       event.Kline.Low,
+		High:      event.Kline.High,
+		Close:     event.Kline.Close,
+	}
+
+	market.CreateCandle(event.Kline.Interval, candle)
 }
 
 func (c *Crawler) handleKlinesStreamError(err error) {

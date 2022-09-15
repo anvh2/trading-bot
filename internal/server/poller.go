@@ -2,7 +2,7 @@ package server
 
 import (
 	"context"
-	"sort"
+	"runtime/debug"
 	"time"
 
 	"github.com/anvh2/trading-bot/internal/config"
@@ -17,7 +17,7 @@ func (s *Server) polling() {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				s.logger.Error("[Polling] failed to process (recovered)", zap.Any("error", r))
+				s.logger.Error("[Polling] failed to process (recovered)", zap.Any("error", r), zap.String("stacktrace", string(debug.Stack())))
 			}
 		}()
 
@@ -25,28 +25,32 @@ func (s *Server) polling() {
 			select {
 			case <-ticker.C:
 				for _, symbol := range s.cache.Symbols() {
-					message := &models.CandlestickChart{
+					market := s.cache.Market(symbol)
+
+					message := &models.CandlesMarket{
 						Symbol:       symbol,
 						Candlesticks: make(map[string][]*models.Candlestick),
+						UpdateTime:   market.Metadata().GetUpdateTime(),
 					}
 
 					for _, interval := range config.Intervals {
-						candleStickData := s.cache.Candlestick(symbol, interval).Range()
-						candleSticks := make([]*models.Candlestick, len(candleStickData))
+						candles := market.Candles(interval)
+						if candles == nil {
+							continue
+						}
 
-						for idx, candleStick := range candleStickData {
-							result, ok := candleStick.(*models.Candlestick)
+						candleData := candles.Sorted()
+						Candlesticks := make([]*models.Candlestick, len(candleData))
+
+						for idx, candle := range candleData {
+							result, ok := candle.(*models.Candlestick)
 							if ok {
-								candleSticks[idx] = result
+								Candlesticks[idx] = result
 							}
 						}
 
-						if len(candleSticks) > 0 {
-							sort.Slice(candleSticks, func(i, j int) bool {
-								return candleSticks[i].OpenTime < candleSticks[j].OpenTime
-							})
-
-							message.Candlesticks[interval] = candleSticks
+						if len(Candlesticks) > 0 {
+							message.Candlesticks[interval] = Candlesticks
 						}
 					}
 

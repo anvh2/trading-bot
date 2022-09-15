@@ -47,9 +47,7 @@ func NewServer(config *models.ExchangeConfig) *Server {
 	}
 
 	storage := storage.New(logger, redisCli)
-
-	cacheCf := &cache.Config{CicularSize: 500}
-	cache := cache.NewCache(cacheCf)
+	cache := cache.NewCache(500)
 
 	notify, err := notify.NewTelegramBot(logger, "5629721774:AAH0Uq1xuqw7oKPSVQrNIDjeT8EgZgMuMZg")
 	if err != nil {

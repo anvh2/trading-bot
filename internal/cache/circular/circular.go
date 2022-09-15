@@ -4,25 +4,27 @@ import (
 	"sync"
 )
 
+// should be use first and last instead of idx and len
 type Cache struct {
-	idx      int32
-	len      int32
-	size     int32
-	internal map[int32]interface{}
-	mutex    *sync.RWMutex
+	idx   int32
+	len   int32
+	size  int32
+	data  map[int32]interface{}
+	meta  interface{}
+	mutex *sync.RWMutex
 }
 
 func New(size int32) *Cache {
 	return &Cache{
-		idx:      0,
-		len:      0,
-		size:     size,
-		internal: make(map[int32]interface{}, size),
-		mutex:    &sync.RWMutex{},
+		idx:   0,
+		len:   0,
+		size:  size,
+		data:  make(map[int32]interface{}, size),
+		mutex: &sync.RWMutex{},
 	}
 }
 
-func (l *Cache) Set(data interface{}) error {
+func (l *Cache) Create(data interface{}) int32 {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
@@ -30,29 +32,60 @@ func (l *Cache) Set(data interface{}) error {
 		l.idx -= l.size
 	}
 
-	l.internal[l.idx] = data
+	l.data[l.idx] = data
 	l.idx++
 
 	if l.len < l.size {
 		l.len++
 	}
 
-	return nil
+	return l.idx - 1
 }
 
-func (l *Cache) Get() []interface{} {
+func (l *Cache) Update(idx int32, data interface{}) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	l.data[idx] = data
+}
+
+func (l *Cache) SetMeta(meta interface{}) {
+	l.meta = meta
+}
+
+func (l *Cache) Metadata() interface{} {
+	return l.meta
+}
+
+func (l *Cache) Last() (interface{}, int32) {
+	if l == nil {
+		return nil, -1
+	}
+
+	var idx int32
+
+	if l.idx == 0 {
+		idx = l.size - 1
+	} else {
+		idx = l.idx - 1
+	}
+
+	return l.data[idx], idx
+}
+
+func (l *Cache) Range() []interface{} {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
 
 	data := make([]interface{}, l.len)
 	for i := int32(0); i < l.len; i++ {
-		data[i] = l.internal[i]
+		data[i] = l.data[i]
 	}
 
 	return data
 }
 
-func (l *Cache) Range() []interface{} {
+func (l *Cache) Sorted() []interface{} {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
 
@@ -60,12 +93,12 @@ func (l *Cache) Range() []interface{} {
 	data := make([]interface{}, l.len)
 
 	for i := l.idx; i < l.len; i++ {
-		data[idx] = l.internal[i]
+		data[idx] = l.data[i]
 		idx++
 	}
 
 	for i := int32(0); i < l.idx; i++ {
-		data[idx] = l.internal[i]
+		data[idx] = l.data[i]
 		idx++
 	}
 
