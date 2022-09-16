@@ -52,5 +52,5 @@ func (m *Market) Metadata() *models.MarketMetadata {
 }
 
 func (m *Market) UpdateMeta() {
-	m.meta.UpdateTime = time.Hour.Milliseconds()
+	m.meta.UpdateTime = time.Now().UnixMilli()
 }

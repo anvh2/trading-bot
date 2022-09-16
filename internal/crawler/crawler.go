@@ -16,6 +16,10 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	blacklist = map[string]bool{"LUNCUSDT": true, "VENUSDT": true}
+)
+
 type Crawler struct {
 	logger  *logger.Logger
 	binance *binance.Client
@@ -61,7 +65,7 @@ func (c *Crawler) WarmUpSymbols() error {
 
 	for _, symbol := range resp.Symbols {
 		if strings.Contains(symbol.Symbol, "USDT") {
-			if symbol.Symbol == "LUNCUSDT" { // TODO: LUNC not enough data yet
+			if blacklist[symbol.Symbol] {
 				continue
 			}
 			selected = append(selected, symbol.Symbol)
