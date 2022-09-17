@@ -1,8 +1,7 @@
-package notify
+package supportbot
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/anvh2/trading-bot/internal/logger"
@@ -37,23 +36,23 @@ func NewTelegramBot(logger *logger.Logger, token string) (*TelegramBot, error) {
 	}, nil
 }
 
-func (t *TelegramBot) Handle(command string, handler func() (interface{}, error)) {
+func (t *TelegramBot) Handle(command string, handler func(ctx context.Context, args []string) (interface{}, error)) {
 	t.bot.Handle(command, func(ctx tb.Context) error {
-		resp, err := handler()
+		resp, err := handler(context.Background(), ctx.Args())
 		if err != nil {
 			return err
 		}
 
-		bytes, err := json.Marshal(resp)
-		if err != nil {
-			return err
-		}
+		// bytes, err := json.Marshal(resp)
+		// if err != nil {
+		// 	return err
+		// }
 
-		return ctx.Send(string(bytes))
+		return ctx.Send(resp)
 	})
 }
 
-func (t *TelegramBot) Push(ctx context.Context, chatId int64, message string) error {
+func (t *TelegramBot) PushNotify(ctx context.Context, chatId int64, message string) error {
 	resp, err := t.bot.Send(&tb.User{ID: chatId}, message)
 	if err != nil {
 		t.logger.Error("[TelegramBot] failed to send message", zap.Any("message", message), zap.Error(err))

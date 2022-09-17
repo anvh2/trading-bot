@@ -8,11 +8,12 @@ import (
 	"os/signal"
 	"syscall"
 
+	supbot "github.com/anvh2/trading-bot/internal/bot/support-bot"
 	"github.com/anvh2/trading-bot/internal/cache"
+	cf "github.com/anvh2/trading-bot/internal/config"
 	"github.com/anvh2/trading-bot/internal/crawler"
 	"github.com/anvh2/trading-bot/internal/logger"
 	"github.com/anvh2/trading-bot/internal/models"
-	"github.com/anvh2/trading-bot/internal/service/notify"
 	"github.com/anvh2/trading-bot/internal/storage"
 	"github.com/anvh2/trading-bot/internal/worker"
 	"github.com/go-redis/redis/v8"
@@ -22,7 +23,7 @@ type Server struct {
 	logger  *logger.Logger
 	config  *models.ExchangeConfig
 	crawler *crawler.Crawler
-	notify  *notify.TelegramBot
+	supbot  *supbot.TelegramBot
 	cache   *cache.Cache
 	storage *storage.Storage
 	worker  *worker.Worker
@@ -47,11 +48,11 @@ func NewServer(config *models.ExchangeConfig) *Server {
 	}
 
 	storage := storage.New(logger, redisCli)
-	cache := cache.NewCache(500)
+	cache := cache.NewCache(cf.CandleLimit)
 
-	notify, err := notify.NewTelegramBot(logger, "5629721774:AAH0Uq1xuqw7oKPSVQrNIDjeT8EgZgMuMZg")
+	supbot, err := supbot.NewTelegramBot(logger, "5629721774:AAH0Uq1xuqw7oKPSVQrNIDjeT8EgZgMuMZg")
 	if err != nil {
-		log.Fatal("failed to new notify bot", err)
+		log.Fatal("failed to new chat bot", err)
 	}
 
 	crawler := crawler.New(logger, config, cache)
@@ -59,14 +60,15 @@ func NewServer(config *models.ExchangeConfig) *Server {
 	server := &Server{
 		logger:      logger,
 		config:      config,
-		notify:      notify,
+		supbot:      supbot,
 		cache:       cache,
 		storage:     storage,
 		crawler:     crawler,
 		quitPolling: make(chan struct{}),
 	}
 
-	server.worker = worker.New(logger, 64, server.ProcessData)
+	server.supbot.Handle("/info", server.handleCommand)
+	server.worker = worker.New(logger, 256, server.ProcessData)
 	return server
 }
 

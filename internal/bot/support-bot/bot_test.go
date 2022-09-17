@@ -1,4 +1,4 @@
-package notify
+package supportbot
 
 import (
 	"context"
@@ -15,5 +15,5 @@ func TestSend(t *testing.T) {
 		return
 	}
 
-	bot.Push(context.Background(), -653827904, "hello world")
+	bot.PushNotify(context.Background(), -653827904, "hello world")
 }

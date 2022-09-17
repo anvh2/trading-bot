@@ -58,3 +58,10 @@ func (c *Cache) Candles(symbol, interval string) *circular.Cache {
 
 	return candles
 }
+
+func (c *Cache) GetMarket(symbol string) *Market {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	return c.cache[symbol]
+}

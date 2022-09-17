@@ -40,17 +40,17 @@ func (s *Server) polling() {
 						}
 
 						candleData := candles.Sorted()
-						Candlesticks := make([]*models.Candlestick, len(candleData))
+						candlesticks := make([]*models.Candlestick, len(candleData))
 
 						for idx, candle := range candleData {
 							result, ok := candle.(*models.Candlestick)
 							if ok {
-								Candlesticks[idx] = result
+								candlesticks[idx] = result
 							}
 						}
 
-						if len(Candlesticks) > 0 {
-							message.Candlesticks[interval] = Candlesticks
+						if len(candlesticks) > 0 {
+							message.Candlesticks[interval] = candlesticks
 						}
 					}
 

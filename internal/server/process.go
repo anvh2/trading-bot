@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/anvh2/trading-bot/internal/config"
+	"github.com/anvh2/trading-bot/internal/indicator"
 	"github.com/anvh2/trading-bot/internal/models"
-	"github.com/cinar/indicator"
 	"go.uber.org/zap"
 )
 
@@ -49,8 +49,8 @@ func (s *Server) ProcessData(ctx context.Context, message *models.CandlesMarket)
 			close[idx] = c
 		}
 
-		_, rsi := indicator.RsiPeriod(14, close)
-		k, d := indicator.StochasticOscillator(high, low, close)
+		_, rsi := indicator.RSIPeriod(14, close)
+		k, d, _ := indicator.KDJ(9, 3, 3, high, low, close)
 
 		stoch := &models.Stoch{
 			RSI: rsi[len(rsi)-1],
@@ -80,22 +80,17 @@ func (s *Server) ProcessData(ctx context.Context, message *models.CandlesMarket)
 		return err
 	}
 
-	return s.notify.Push(ctx, config.TelegramChatId, msg)
+	return s.supbot.PushNotify(ctx, config.TelegramChatId, msg)
 }
 
 func isReadyToTrade(oscillator *models.Oscillator) bool {
-	counter := 0
-	for _, stoch := range oscillator.Stoch {
-		if stoch.RSI == 0 {
-			counter++
-			continue
-		}
-
-		if stoch.RSI < 70 && stoch.RSI > 30 {
-			counter++
-			continue
-		}
+	stoch := oscillator.Stoch["1h"]
+	if stoch == nil {
+		return false
 	}
 
-	return counter <= 1
+	if stoch.RSI >= 70 || stoch.RSI <= 30 {
+		return true
+	}
+	return false
 }

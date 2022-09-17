@@ -3,33 +3,38 @@ package crawler
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/adshao/go-binance/v2"
+	"github.com/adshao/go-binance/v2/futures"
 	"github.com/anvh2/trading-bot/internal/cache"
+	"github.com/anvh2/trading-bot/internal/client"
 	"github.com/anvh2/trading-bot/internal/config"
 	"github.com/anvh2/trading-bot/internal/logger"
 	"github.com/anvh2/trading-bot/internal/models"
+	"github.com/bitly/go-simplejson"
 	"go.uber.org/zap"
 )
 
 var (
-	blacklist = map[string]bool{"LUNCUSDT": true, "VENUSDT": true}
+	blacklist = map[string]bool{}
 )
 
 type Crawler struct {
 	logger  *logger.Logger
-	binance *binance.Client
+	binance *futures.Client
 	config  *models.ExchangeConfig
 	cache   *cache.Cache
 	quit    chan struct{}
 }
 
 func New(logger *logger.Logger, config *models.ExchangeConfig, cache *cache.Cache) *Crawler {
-	client := binance.NewClient(config.PublicKey, config.SecretKey)
+	client := futures.NewClient(config.PublicKey, config.SecretKey)
 
 	return &Crawler{
 		logger:  logger,
@@ -93,10 +98,7 @@ func (c *Crawler) WarmUpCache() error {
 			defer wg.Done()
 
 			for _, symbol := range c.cache.Symbols() {
-				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-				defer cancel()
-
-				resp, err := c.binance.NewKlinesService().Symbol(symbol).Interval(interval).Limit(int(config.CandleSize)).Do(ctx)
+				resp, err := GetCandlesticks(symbol, interval, int(config.CandleLimit))
 				if err != nil {
 					c.logger.Error("[Crawler][WarmUpCache] failed to get klines data", zap.String("symbol", symbol), zap.String("interval", interval), zap.Error(err))
 					return
@@ -147,7 +149,7 @@ func (c *Crawler) Streaming() error {
 			<-done
 		}()
 
-		time.Sleep(5 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 
 	return nil
@@ -197,4 +199,57 @@ func (c *Crawler) handleKlinesStreamData(event *binance.WsKlineEvent) {
 
 func (c *Crawler) handleKlinesStreamError(err error) {
 	c.logger.Error("[Crawler][Streaming] failed to recieve stream data", zap.Error(err))
+}
+
+func GetCandlesticks(symbol, interval string, limit int) ([]*binance.Kline, error) {
+	url := fmt.Sprintf("https://www.binance.com/fapi/v1/continuousKlines?limit=%d&pair=%s&contractType=PERPETUAL&interval=%s", limit, symbol, interval)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	cli := client.New()
+
+	res, err := cli.Do(req)
+	if err != nil {
+		return []*binance.Kline{}, err
+	}
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return []*binance.Kline{}, err
+	}
+	defer func() {
+		res.Body.Close()
+	}()
+
+	json, err := simplejson.NewJson(data)
+	if err != nil {
+		return []*binance.Kline{}, err
+	}
+
+	num := len(json.MustArray())
+	resp := make([]*binance.Kline, num)
+	for i := 0; i < num; i++ {
+		item := json.GetIndex(i)
+		if len(item.MustArray()) < 11 {
+			return []*binance.Kline{}, fmt.Errorf("invalid kline response")
+		}
+		resp[i] = &binance.Kline{
+			OpenTime:                 item.GetIndex(0).MustInt64(),
+			Open:                     item.GetIndex(1).MustString(),
+			High:                     item.GetIndex(2).MustString(),
+			Low:                      item.GetIndex(3).MustString(),
+			Close:                    item.GetIndex(4).MustString(),
+			Volume:                   item.GetIndex(5).MustString(),
+			CloseTime:                item.GetIndex(6).MustInt64(),
+			QuoteAssetVolume:         item.GetIndex(7).MustString(),
+			TradeNum:                 item.GetIndex(8).MustInt64(),
+			TakerBuyBaseAssetVolume:  item.GetIndex(9).MustString(),
+			TakerBuyQuoteAssetVolume: item.GetIndex(10).MustString(),
+		}
+	}
+
+	return resp, nil
 }
