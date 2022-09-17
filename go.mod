@@ -1,6 +1,6 @@
 module github.com/anvh2/trading-bot
 
-go 1.17
+go 1.18
 
 require (
 	github.com/adshao/go-binance/v2 v2.3.8
@@ -10,8 +10,8 @@ require (
 )
 
 require (
+	github.com/cinar/indicator v1.2.24
 	github.com/go-redis/redis/v8 v8.11.5
-	github.com/markcheno/go-talib v0.0.0-20190307022042-cd53a9264d70
 	github.com/stretchr/testify v1.8.0
 	go.uber.org/zap v1.23.0
 	gopkg.in/telebot.v3 v3.0.0

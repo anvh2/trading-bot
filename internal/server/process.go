@@ -11,7 +11,7 @@ import (
 
 	"github.com/anvh2/trading-bot/internal/config"
 	"github.com/anvh2/trading-bot/internal/models"
-	"github.com/markcheno/go-talib"
+	"github.com/cinar/indicator"
 	"go.uber.org/zap"
 )
 
@@ -34,31 +34,28 @@ func (s *Server) ProcessData(ctx context.Context, message *models.CandlesMarket)
 	}
 
 	for interval, candles := range message.Candlesticks {
-		inLow := make([]float64, len(candles))
-		inHight := make([]float64, len(candles))
-		inClose := make([]float64, len(candles))
+		low := make([]float64, len(candles))
+		high := make([]float64, len(candles))
+		close := make([]float64, len(candles))
 
 		for idx, candle := range candles {
-			low, _ := strconv.ParseFloat(candle.Low, 64)
-			inLow[idx] = low
+			l, _ := strconv.ParseFloat(candle.Low, 64)
+			low[idx] = l
 
-			hight, _ := strconv.ParseFloat(candle.High, 64)
-			inHight[idx] = hight
+			h, _ := strconv.ParseFloat(candle.High, 64)
+			high[idx] = h
 
-			close, _ := strconv.ParseFloat(candle.Close, 64)
-			inClose[idx] = close
+			c, _ := strconv.ParseFloat(candle.Close, 64)
+			close[idx] = c
 		}
 
-		stochSettings := config.StochSettings[config.StochShortTerm]
-
-		slowK, slowD := talib.Stoch(inHight, inLow, inClose, stochSettings.FastKPeriod, stochSettings.SlowKPeriod, talib.SMA, stochSettings.SlowDPeriod, talib.SMA)
-		result := talib.Rsi(inClose, config.RSIPeriod)
-		rsi := result[len(result)-1]
+		_, rsi := indicator.RsiPeriod(14, close)
+		k, d := indicator.StochasticOscillator(high, low, close)
 
 		stoch := &models.Stoch{
-			RSI:   rsi,
-			SlowK: slowK[len(slowK)-1],
-			SlowD: slowD[len(slowD)-1],
+			RSI: rsi[len(rsi)-1],
+			K:   k[len(k)-1],
+			D:   d[len(d)-1],
 		}
 
 		oscillator.Stoch[interval] = stoch
@@ -76,7 +73,7 @@ func (s *Server) ProcessData(ctx context.Context, message *models.CandlesMarket)
 			return errors.New("stoch in interval invalid")
 		}
 
-		msg += fmt.Sprintf("\t%03s:\t RSI %2.2f | K %02.2f | D %02.2f\n", strings.ToUpper(interval), stoch.RSI, stoch.SlowK, stoch.SlowD)
+		msg += fmt.Sprintf("\t%03s:\t RSI %2.2f | K %02.2f | D %02.2f\n", strings.ToUpper(interval), stoch.RSI, stoch.K, stoch.D)
 	}
 
 	if err := s.storage.SetNXOscillator(ctx, oscillator); err != nil {

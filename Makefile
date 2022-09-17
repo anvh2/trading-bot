@@ -8,7 +8,7 @@ go-vendor:
 	go mod tidy && go mod vendor
 
 build: clean go-vendor
-	GOOS=linux go build -o $(BIN)
+	GOOS=linux GOARCH=amd64 go build -o $(BIN)
 
 rsync:
 	rsync -avz $(BIN) config.* root@165.22.103.161:/server/$(BIN)/

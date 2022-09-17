@@ -10,6 +10,11 @@ github.com/bitly/go-simplejson
 # github.com/cespare/xxhash/v2 v2.1.2
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
+# github.com/cinar/indicator v1.2.24
+## explicit; go 1.14
+github.com/cinar/indicator
+github.com/cinar/indicator/container
+github.com/cinar/indicator/container/bst
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
@@ -35,9 +40,6 @@ github.com/inconshreveable/mousetrap
 # github.com/json-iterator/go v1.1.12
 ## explicit; go 1.12
 github.com/json-iterator/go
-# github.com/markcheno/go-talib v0.0.0-20190307022042-cd53a9264d70
-## explicit
-github.com/markcheno/go-talib
 # github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421
 ## explicit
 github.com/modern-go/concurrent

@@ -37,7 +37,7 @@ func NewServer(config *models.ExchangeConfig) *Server {
 	}
 
 	redisCli := redis.NewClient(&redis.Options{
-		Addr:       "0.0.0.0:6379",
+		Addr:       ":6379",
 		DB:         1,
 		MaxRetries: 5,
 	})

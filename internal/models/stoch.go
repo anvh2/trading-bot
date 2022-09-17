@@ -3,9 +3,9 @@ package models
 import "encoding/json"
 
 type Stoch struct {
-	RSI   float64 `json:"rsi"`
-	SlowK float64 `json:"slow_k"`
-	SlowD float64 `json:"slow_d"`
+	RSI float64 `json:"rsi"`
+	K   float64 `json:"k"`
+	D   float64 `json:"d"`
 }
 
 type Oscillator struct {
