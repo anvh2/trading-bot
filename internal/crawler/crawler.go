@@ -175,6 +175,8 @@ func (c *Crawler) handleKlinesStreamData(event *binance.WsKlineEvent) {
 		lastCandle.CloseTime == event.Kline.EndTime {
 
 		lastCandle.Close = event.Kline.Close
+		lastCandle.High = event.Kline.High
+		lastCandle.Low = event.Kline.Low
 
 		candles.Update(idx, lastCandle)
 		market.UpdateMeta()
