@@ -65,7 +65,7 @@ func (s *Server) ProcessData(ctx context.Context, message *models.Chart) error {
 		return errors.New("not ready to trade")
 	}
 
-	msg := fmt.Sprintf("%s\t\t\t latency: +%0.4f(s)\n", message.Symbol, float64((time.Now().UnixMilli()-message.UpdateTime)/1000))
+	msg := fmt.Sprintf("%s\t\t\t latency: +%0.4f(s)\n", message.Symbol, float64((time.Now().UnixMilli()-message.UpdateTime))/1000.0)
 
 	for _, interval := range config.Intervals {
 		stoch, ok := oscillator.Stoch[interval]
