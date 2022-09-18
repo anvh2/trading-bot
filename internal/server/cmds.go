@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/anvh2/trading-bot/internal/config"
 	"github.com/anvh2/trading-bot/internal/indicator"
@@ -24,14 +23,14 @@ func (s *Server) handleCommand(ctx context.Context, args []string) (interface{},
 		Stoch:  make(map[string]*models.Stoch),
 	}
 
-	market := s.cache.Market(symbol)
-	if market == nil {
+	chart, err := s.market.Chart(symbol)
+	if err != nil {
 		return "Unknown Symbol", nil
 	}
 
 	for _, interval := range config.Intervals {
-		candles := market.Candles(interval)
-		if candles == nil {
+		candles, err := chart.Candles(interval)
+		if err != nil {
 			continue
 		}
 
@@ -67,7 +66,7 @@ func (s *Server) handleCommand(ctx context.Context, args []string) (interface{},
 		oscillator.Stoch[interval] = stoch
 	}
 
-	msg := fmt.Sprintf("%s\t\t latency: +%d(ms)\n", symbol, time.Now().UnixMilli()-market.Metadata().GetUpdateTime())
+	msg := fmt.Sprintf("%s\n", symbol)
 
 	for _, interval := range config.Intervals {
 		stoch, ok := oscillator.Stoch[interval]

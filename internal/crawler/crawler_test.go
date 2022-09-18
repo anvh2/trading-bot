@@ -3,6 +3,7 @@ package crawler
 import (
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"strconv"
 	"testing"
@@ -67,10 +68,9 @@ func TestCalculateStoch(t *testing.T) {
 	// 	close[i] = c
 
 	// }
-
 	cli := &http.Client{}
 
-	req, err := http.NewRequest(http.MethodGet, "https://www.binance.com/fapi/v1/continuousKlines?limit=1000&pair=BTCUSDT&contractType=PERPETUAL&interval=1d", nil)
+	req, err := http.NewRequest(http.MethodGet, "https://www.binance.com/fapi/v1/continuousKlines?limit=1000&pair=BTSUSDT&contractType=PERPETUAL&interval=1d", nil)
 	if err != nil {
 		fmt.Println("New Request Error", err)
 		return
@@ -100,6 +100,8 @@ func TestCalculateStoch(t *testing.T) {
 		return
 	}
 
+	fmt.Println(len(json.MustArray()))
+
 	low := make([]float64, len(json.MustArray()))
 	high := make([]float64, len(json.MustArray()))
 	close := make([]float64, len(json.MustArray()))
@@ -122,4 +124,6 @@ func TestCalculateStoch(t *testing.T) {
 	fmt.Print(k[len(k)-1], d[len(d)-1], j[len(j)-1], " ")
 	_, rsi := indicator.RsiPeriod(14, close)
 	fmt.Println(rsi[len(rsi)-1])
+
+	fmt.Println(math.IsNaN(k[len(k)-1]))
 }

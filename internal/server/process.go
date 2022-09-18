@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (s *Server) ProcessData(ctx context.Context, message *models.CandlesMarket) error {
+func (s *Server) ProcessData(ctx context.Context, message *models.Chart) error {
 	defer func() {
 		if r := recover(); r != nil {
 			s.logger.Error("[ProcessData] process message failed", zap.String("symbol", message.Symbol), zap.Any("error", r), zap.String("stacktrace", string(debug.Stack())))
@@ -23,8 +23,8 @@ func (s *Server) ProcessData(ctx context.Context, message *models.CandlesMarket)
 	}()
 
 	if message == nil ||
-		message.Candlesticks == nil ||
-		len(message.Candlesticks) == 0 {
+		message.Candles == nil ||
+		len(message.Candles) == 0 {
 		return errors.New("message invalid")
 	}
 
@@ -33,7 +33,7 @@ func (s *Server) ProcessData(ctx context.Context, message *models.CandlesMarket)
 		Stoch:  make(map[string]*models.Stoch),
 	}
 
-	for interval, candles := range message.Candlesticks {
+	for interval, candles := range message.Candles {
 		low := make([]float64, len(candles))
 		high := make([]float64, len(candles))
 		close := make([]float64, len(candles))
@@ -65,7 +65,7 @@ func (s *Server) ProcessData(ctx context.Context, message *models.CandlesMarket)
 		return errors.New("not ready to trade")
 	}
 
-	msg := fmt.Sprintf("%s\t\t latency: +%d(ms)\n", message.Symbol, time.Now().UnixMilli()-message.UpdateTime)
+	msg := fmt.Sprintf("%s\t\t\t latency: +%0.4f(s)\n", message.Symbol, float64((time.Now().UnixMilli()-message.UpdateTime)/1000))
 
 	for _, interval := range config.Intervals {
 		stoch, ok := oscillator.Stoch[interval]
@@ -76,7 +76,7 @@ func (s *Server) ProcessData(ctx context.Context, message *models.CandlesMarket)
 		msg += fmt.Sprintf("\t%03s:\t RSI %2.2f | K %02.2f | D %02.2f\n", strings.ToUpper(interval), stoch.RSI, stoch.K, stoch.D)
 	}
 
-	if err := s.storage.SetNXOscillator(ctx, oscillator); err != nil {
+	if err := s.notify.Create(ctx, message.Symbol); err != nil {
 		return err
 	}
 
@@ -90,7 +90,10 @@ func isReadyToTrade(oscillator *models.Oscillator) bool {
 	}
 
 	if stoch.RSI >= 70 || stoch.RSI <= 30 {
-		return true
+		if (stoch.K >= 80 || stoch.K <= 20) &&
+			(stoch.D >= 80 || stoch.D <= 20) {
+			return true
+		}
 	}
 	return false
 }

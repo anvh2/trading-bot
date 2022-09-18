@@ -24,8 +24,8 @@ type Server struct {
 	config  *models.ExchangeConfig
 	crawler *crawler.Crawler
 	supbot  *supbot.TelegramBot
-	cache   *cache.Cache
-	storage *storage.Storage
+	market  *cache.Market
+	notify  *storage.Notify
 	worker  *worker.Worker
 
 	quitPolling chan struct{}
@@ -47,22 +47,22 @@ func NewServer(config *models.ExchangeConfig) *Server {
 		log.Fatal("failed to connect to redis", err)
 	}
 
-	storage := storage.New(logger, redisCli)
-	cache := cache.NewCache(cf.CandleLimit)
+	notify := storage.NewNotify(logger, redisCli)
+	market := cache.NewMarket(cf.CandleLimit)
 
 	supbot, err := supbot.NewTelegramBot(logger, "5629721774:AAH0Uq1xuqw7oKPSVQrNIDjeT8EgZgMuMZg")
 	if err != nil {
 		log.Fatal("failed to new chat bot", err)
 	}
 
-	crawler := crawler.New(logger, config, cache)
+	crawler := crawler.New(logger, config, market)
 
 	server := &Server{
 		logger:      logger,
 		config:      config,
 		supbot:      supbot,
-		cache:       cache,
-		storage:     storage,
+		market:      market,
+		notify:      notify,
 		crawler:     crawler,
 		quitPolling: make(chan struct{}),
 	}

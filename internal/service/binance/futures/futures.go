@@ -1,4 +1,4 @@
-package features
+package futures
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/adshao/go-binance/v2/futures"
 	"github.com/anvh2/trading-bot/internal/logger"
-	"github.com/anvh2/trading-bot/internal/models"
+	binance "github.com/anvh2/trading-bot/internal/models/binance"
 	"go.uber.org/zap"
 )
 
@@ -33,7 +33,7 @@ func New(logger *logger.Logger, config *ClientConfig) (*Exchange, error) {
 	}, nil
 }
 
-func (e *Exchange) BuyLong(ctx context.Context, market *models.Market, amount int64) error {
+func (e *Exchange) BuyLong(ctx context.Context, market *binance.Market, amount int64) error {
 	order := e.api.NewCreateOrderService()
 	order.Type(futures.OrderTypeLimit).
 		Side(futures.SideTypeBuy).

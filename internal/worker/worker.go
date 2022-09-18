@@ -8,12 +8,12 @@ import (
 	"github.com/anvh2/trading-bot/internal/models"
 )
 
-type Process func(ctx context.Context, message *models.CandlesMarket) error
+type Process func(ctx context.Context, message *models.Chart) error
 
 type Worker struct {
 	logger  *logger.Logger
 	process Process
-	message chan *models.CandlesMarket
+	message chan *models.Chart
 	quit    chan struct{}
 	wait    *sync.WaitGroup
 	size    int32
@@ -23,7 +23,7 @@ func New(logger *logger.Logger, size int32, process Process) *Worker {
 	return &Worker{
 		logger:  logger,
 		process: process,
-		message: make(chan *models.CandlesMarket),
+		message: make(chan *models.Chart),
 		quit:    make(chan struct{}),
 		wait:    &sync.WaitGroup{},
 		size:    size,
@@ -59,6 +59,6 @@ func (w *Worker) Stop() {
 	w.wait.Wait()
 }
 
-func (w *Worker) SendJob(ctx context.Context, message *models.CandlesMarket) {
+func (w *Worker) SendJob(ctx context.Context, message *models.Chart) {
 	w.message <- message
 }

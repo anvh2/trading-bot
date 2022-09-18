@@ -1,56 +1,89 @@
 package cache
 
 import (
+	"errors"
 	"sync"
-	"time"
 
 	"github.com/anvh2/trading-bot/internal/cache/circular"
-	"github.com/anvh2/trading-bot/internal/models"
+)
+
+var (
+	ErrorChartNotFound   = errors.New("chart: not found")
+	ErrorCandlesNotFound = errors.New("candles: not found")
 )
 
 type Market struct {
-	mutex   *sync.RWMutex
-	symbol  string
-	candles map[string]*circular.Cache // map[interval]candles
-	meta    *models.MarketMetadata
-	limit   int32 // limit of candles's length
+	mutex   *sync.Mutex
+	symbols []string
+	cache   map[string]*Chart // map[symbol]chart
+	limit   int32
 }
 
-func (m *Market) Init(symbol string, limit int32) *Market {
+func NewMarket(limit int32) *Market {
 	return &Market{
-		mutex:   &sync.RWMutex{},
-		symbol:  symbol,
-		candles: make(map[string]*circular.Cache),
-		meta: &models.MarketMetadata{
-			UpdateTime: time.Hour.Milliseconds(),
-		},
-		limit: limit,
+		mutex:   &sync.Mutex{},
+		symbols: []string{},
+		cache:   make(map[string]*Chart),
+		limit:   limit,
 	}
 }
 
-func (m *Market) Candles(interval string) *circular.Cache {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-
-	return m.candles[interval]
+func (c *Market) CacheSymbols(symbols []string) {
+	c.symbols = symbols
 }
 
-func (m *Market) CreateCandle(interval string, candle *models.Candlestick) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
+func (c *Market) Symbols() []string {
+	return c.symbols
+}
 
-	if m.candles[interval] == nil {
-		m.candles[interval] = circular.New(m.limit)
+func (c *Market) Chart(symbol string) (*Chart, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if c.cache[symbol] == nil {
+		return nil, ErrorChartNotFound
 	}
 
-	m.candles[interval].Create(candle)
-	m.meta.UpdateTime = time.Now().UnixMilli()
+	return c.cache[symbol], nil
 }
 
-func (m *Market) Metadata() *models.MarketMetadata {
-	return m.meta
+func (c *Market) CreateChart(symbol string) *Chart {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if c.cache[symbol] == nil {
+		market := new(Chart)
+		c.cache[symbol] = market.Init(symbol, c.limit)
+	}
+
+	return c.cache[symbol]
 }
 
-func (m *Market) UpdateMeta() {
-	m.meta.UpdateTime = time.Now().UnixMilli()
+func (c *Market) UpdateChart(symbol string) *Chart {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if c.cache[symbol] == nil {
+		market := new(Chart)
+		c.cache[symbol] = market.Init(symbol, c.limit)
+	}
+
+	return c.cache[symbol]
+}
+
+func (c *Market) Candles(symbol, interval string) *circular.Cache {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if c.cache[symbol] == nil {
+		market := new(Chart)
+		c.cache[symbol] = market.Init(symbol, c.limit)
+	}
+
+	candles := c.cache[symbol].cache[interval]
+	if candles == nil {
+		candles = circular.New(c.limit)
+	}
+
+	return candles
 }

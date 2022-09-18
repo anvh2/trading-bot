@@ -7,8 +7,8 @@ var (
 const (
 	CandleLimit int32 = 1000
 
-	TelegramChatId int64 = -653827904 // Trading Recommendation
-	// TelegramChatId int64 = 1630847448 // @anvh21
+	// TelegramChatId int64 = -653827904 // Trading Recommendation
+	TelegramChatId int64 = 1630847448 // @anvh21
 )
 
 //SPDR S&P 500 Trust (SPY) shows different Stochastics footprints, depending on variables.

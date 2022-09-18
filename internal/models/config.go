@@ -15,18 +15,13 @@
 
 package models
 
-import (
-	"github.com/shopspring/decimal"
-)
-
 // ExchangeConfig Represents a configuration for an API Connection to an exchange.
 // Can be used to generate an ExchangeWrapper.
 type ExchangeConfig struct {
-	Name             string                     `yaml:"name"`              // Represents the exchange name.
-	PublicKey        string                     `yaml:"public_key"`        // Represents the public key used to connect to Exchange API.
-	SecretKey        string                     `yaml:"secret_key"`        // Represents the secret key used to connect to Exchange API.
-	DepositAddresses map[string]string          `yaml:"deposit_addresses"` // Represents the bindings between coins and deposit address on the exchange.
-	FakeBalances     map[string]decimal.Decimal `yaml:"fake_balances"`     // Used only in simulation mode, fake starting balance [coin:balance].
+	Name             string            `yaml:"name"`              // Represents the exchange name.
+	PublicKey        string            `yaml:"public_key"`        // Represents the public key used to connect to Exchange API.
+	SecretKey        string            `yaml:"secret_key"`        // Represents the secret key used to connect to Exchange API.
+	DepositAddresses map[string]string `yaml:"deposit_addresses"` // Represents the bindings between coins and deposit address on the exchange.
 }
 
 // BotConfig contains all config data of the bot, which can be also loaded from config file.

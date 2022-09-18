@@ -24,19 +24,22 @@ func (s *Server) polling() {
 		for {
 			select {
 			case <-ticker.C:
-				for _, symbol := range s.cache.Symbols() {
-					market := s.cache.Market(symbol)
+				for _, symbol := range s.market.Symbols() {
+					chart, err := s.market.Chart(symbol)
+					if err != nil {
+						break
+					}
 
-					message := &models.CandlesMarket{
-						Symbol:       symbol,
-						Candlesticks: make(map[string][]*models.Candlestick),
-						UpdateTime:   market.Metadata().GetUpdateTime(),
+					message := &models.Chart{
+						Symbol:     symbol,
+						Candles:    make(map[string][]*models.Candlestick),
+						UpdateTime: chart.GetUpdateTime(),
 					}
 
 					for _, interval := range config.Intervals {
-						candles := market.Candles(interval)
-						if candles == nil {
-							continue
+						candles, err := chart.Candles(interval)
+						if err != nil {
+							break
 						}
 
 						candleData := candles.Sorted()
@@ -50,7 +53,7 @@ func (s *Server) polling() {
 						}
 
 						if len(candlesticks) > 0 {
-							message.Candlesticks[interval] = candlesticks
+							message.Candles[interval] = candlesticks
 						}
 					}
 

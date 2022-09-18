@@ -10,7 +10,6 @@ type Cache struct {
 	len   int32
 	size  int32
 	data  map[int32]interface{}
-	meta  interface{}
 	mutex *sync.RWMutex
 }
 
@@ -47,14 +46,6 @@ func (l *Cache) Update(idx int32, data interface{}) {
 	defer l.mutex.Unlock()
 
 	l.data[idx] = data
-}
-
-func (l *Cache) SetMeta(meta interface{}) {
-	l.meta = meta
-}
-
-func (l *Cache) Metadata() interface{} {
-	return l.meta
 }
 
 func (l *Cache) Last() (interface{}, int32) {

@@ -22,19 +22,8 @@ func (cs Candlestick) String() string {
 	return string(b)
 }
 
-type CandlesMarket struct {
-	Symbol       string                    `json:"symbol"`
-	Candlesticks map[string][]*Candlestick `json:"candlesticks"`
-	UpdateTime   int64                     `json:"update_time"`
-}
-
-type MarketMetadata struct {
-	UpdateTime int64 `json:"update_time"`
-}
-
-func (m *MarketMetadata) GetUpdateTime() int64 {
-	if m == nil {
-		return 0
-	}
-	return m.UpdateTime
+type Chart struct {
+	Symbol     string                    `json:"symbol"`
+	Candles    map[string][]*Candlestick `json:"candlesticks"`
+	UpdateTime int64                     `json:"update_time"`
 }
