@@ -4,28 +4,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/anvh2/trading-bot/internal/config"
+	"github.com/anvh2/trading-bot/internal/helpers"
 	"github.com/anvh2/trading-bot/internal/indicator"
 	"github.com/anvh2/trading-bot/internal/models"
-	"go.uber.org/zap"
 )
 
-func (s *Server) ProcessData(ctx context.Context, message *models.Chart) error {
-	defer func() {
-		if r := recover(); r != nil {
-			s.logger.Error("[ProcessData] process message failed", zap.String("symbol", message.Symbol), zap.Any("error", r), zap.String("stacktrace", string(debug.Stack())))
-		}
-	}()
-
-	if message == nil ||
-		message.Candles == nil ||
-		len(message.Candles) == 0 {
-		return errors.New("message invalid")
+func (s *Server) ProcessNotify(ctx context.Context, message *models.Chart) error {
+	if err := validateNotifyMessage(message); err != nil {
+		return err
 	}
 
 	oscillator := &models.Oscillator{
@@ -61,7 +52,7 @@ func (s *Server) ProcessData(ctx context.Context, message *models.Chart) error {
 		oscillator.Stoch[interval] = stoch
 	}
 
-	if !isReadyToTrade(oscillator) {
+	if !helpers.CheckIndicatorIsReadyToTrade(oscillator) {
 		return errors.New("not ready to trade")
 	}
 
@@ -76,24 +67,19 @@ func (s *Server) ProcessData(ctx context.Context, message *models.Chart) error {
 		msg += fmt.Sprintf("\t%03s:\t RSI %2.2f | K %02.2f | D %02.2f\n", strings.ToUpper(interval), stoch.RSI, stoch.K, stoch.D)
 	}
 
-	if err := s.notify.Create(ctx, message.Symbol); err != nil {
+	if err := s.notifyDb.Create(ctx, message.Symbol); err != nil {
 		return err
 	}
 
-	return s.supbot.PushNotify(ctx, config.TelegramChatId, msg)
+	s.trader.SendNotify(ctx, oscillator)
+	s.supbot.PushNotify(ctx, config.TelegramNotifyChatId, msg)
+
+	return nil
 }
 
-func isReadyToTrade(oscillator *models.Oscillator) bool {
-	stoch := oscillator.Stoch["1h"]
-	if stoch == nil {
-		return false
+func validateNotifyMessage(message *models.Chart) error {
+	if message == nil {
+		return errors.New("notify: message invalid")
 	}
-
-	if stoch.RSI >= 70 || stoch.RSI <= 30 {
-		if (stoch.K >= 80 || stoch.K <= 20) &&
-			(stoch.D >= 80 || stoch.D <= 20) {
-			return true
-		}
-	}
-	return false
+	return nil
 }

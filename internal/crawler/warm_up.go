@@ -9,7 +9,6 @@ import (
 
 	"github.com/anvh2/trading-bot/internal/config"
 	"github.com/anvh2/trading-bot/internal/models"
-	"github.com/anvh2/trading-bot/internal/service/binance/futures"
 	"go.uber.org/zap"
 )
 
@@ -52,7 +51,7 @@ func (c *Crawler) WarmUpCache() error {
 			defer wg.Done()
 
 			for _, symbol := range c.market.Symbols() {
-				resp, err := futures.GetCandlesticks(symbol, interval, int(config.CandleLimit))
+				resp, err := c.futures.ListCandlesticks(context.Background(), symbol, interval, int(config.CandleLimit))
 				if err != nil {
 					c.logger.Error("[Crawler][WarmUpCache] failed to get klines data", zap.String("symbol", symbol), zap.String("interval", interval), zap.Error(err))
 					return

@@ -40,7 +40,7 @@ func (s *Notify) Create(ctx context.Context, notifyId string) error {
 
 	effected, err := s.db.SetNX(ctx, key, "", expirationNotify).Result()
 	if err != nil {
-		s.logger.Error("[Notify][Cache] failed to set oscillator to redis", zap.Any("notifyId", notifyId), zap.Error(err))
+		s.logger.Error("[Storage][CreateNotify] failed to set oscillator to redis", zap.Any("notifyId", notifyId), zap.Error(err))
 		return err
 	}
 
@@ -48,6 +48,6 @@ func (s *Notify) Create(ctx context.Context, notifyId string) error {
 		return ErrNotifyIsAlreadyExist
 	}
 
-	s.logger.Info("[Notify][Cache] set oscillator success", zap.Any("notifyId", notifyId))
+	s.logger.Info("[Storage][CreateNotify] set oscillator success", zap.Any("notifyId", notifyId))
 	return nil
 }

@@ -1,10 +1,10 @@
 package crawler
 
 import (
-	"github.com/adshao/go-binance/v2/futures"
+	binance "github.com/adshao/go-binance/v2/futures"
 	"github.com/anvh2/trading-bot/internal/cache"
 	"github.com/anvh2/trading-bot/internal/logger"
-	"github.com/anvh2/trading-bot/internal/models"
+	"github.com/anvh2/trading-bot/internal/service/futures"
 )
 
 var (
@@ -13,32 +13,34 @@ var (
 
 type Crawler struct {
 	logger  *logger.Logger
-	binance *futures.Client
-	config  *models.ExchangeConfig
+	binance *binance.Client
+	futures *futures.Futures
 	market  *cache.Market
 	quit    chan struct{}
 }
 
-func New(logger *logger.Logger, config *models.ExchangeConfig, market *cache.Market) *Crawler {
-	client := futures.NewClient(config.PublicKey, config.SecretKey)
-
+func New(logger *logger.Logger, market *cache.Market, binance *binance.Client, futures *futures.Futures) *Crawler {
 	return &Crawler{
 		logger:  logger,
-		binance: client,
-		config:  config,
+		binance: binance,
+		futures: futures,
 		market:  market,
 		quit:    make(chan struct{}),
 	}
 }
 
-func (c *Crawler) Start() {
+func (c *Crawler) Start() chan bool {
+	ready := make(chan bool)
+
 	c.WarmUpSymbols()
 
 	go func() {
 		c.WarmUpCache()
 		c.CrawlData()
-		c.logger.Info("[Crawler] warmup success")
+		ready <- true
 	}()
+
+	return ready
 }
 
 func (c *Crawler) Stop() {

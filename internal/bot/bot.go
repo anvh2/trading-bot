@@ -1,4 +1,4 @@
-package supportbot
+package bot
 
 import (
 	"context"

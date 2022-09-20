@@ -1,16 +1,48 @@
 package futures
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 
 	"github.com/adshao/go-binance/v2"
-	"github.com/anvh2/trading-bot/internal/client"
+	"github.com/adshao/go-binance/v2/futures"
 	"github.com/bitly/go-simplejson"
 )
 
-func GetCandlesticks(symbol, interval string, limit int) ([]*binance.Kline, error) {
+func (f *Futures) GetCurrentPrice(ctx context.Context, symbol string) (*futures.SymbolPrice, error) {
+	url := fmt.Sprintf("https://fapi.binance.com/fapi/v1/ticker/price?symbol=%s", symbol)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req = req.WithContext(ctx)
+
+	res, err := f.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	price := &futures.SymbolPrice{}
+
+	if err := json.Unmarshal(data, price); err != nil {
+		return price, err
+	}
+
+	return price, nil
+}
+
+func (f *Futures) ListCandlesticks(ctx context.Context, symbol, interval string, limit int) ([]*binance.Kline, error) {
 	url := fmt.Sprintf("https://www.binance.com/fapi/v1/continuousKlines?limit=%d&pair=%s&contractType=PERPETUAL&interval=%s", limit, symbol, interval)
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -18,9 +50,9 @@ func GetCandlesticks(symbol, interval string, limit int) ([]*binance.Kline, erro
 		return nil, err
 	}
 
-	cli := client.New()
+	req = req.WithContext(ctx)
 
-	res, err := cli.Do(req)
+	res, err := f.client.Do(req)
 	if err != nil {
 		return []*binance.Kline{}, err
 	}
@@ -29,9 +61,8 @@ func GetCandlesticks(symbol, interval string, limit int) ([]*binance.Kline, erro
 	if err != nil {
 		return []*binance.Kline{}, err
 	}
-	defer func() {
-		res.Body.Close()
-	}()
+
+	defer res.Body.Close()
 
 	json, err := simplejson.NewJson(data)
 	if err != nil {

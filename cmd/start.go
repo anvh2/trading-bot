@@ -19,7 +19,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/anvh2/trading-bot/internal/models"
 	"github.com/anvh2/trading-bot/internal/server"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -35,12 +34,12 @@ var startCmd = &cobra.Command{
 			return err
 		}
 
-		srv := server.NewServer(botConfig.ExchangeConfig)
+		srv := server.NewServer()
 		return srv.Start()
 	},
 }
 
-var botConfig models.BotConfig
+var botConfig BotConfig
 
 func init() {
 	RootCmd.AddCommand(startCmd)

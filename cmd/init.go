@@ -21,7 +21,6 @@ import (
 
 	yaml "gopkg.in/yaml.v2"
 
-	"github.com/anvh2/trading-bot/internal/models"
 	"github.com/spf13/cobra"
 )
 
@@ -56,7 +55,7 @@ func initConfig() {
 			fmt.Println()
 			return
 		}
-		var checker models.BotConfig
+		var checker BotConfig
 		err = yaml.Unmarshal(content, &checker)
 		if err != nil {
 			fmt.Print("Cannot load provided configuration file")

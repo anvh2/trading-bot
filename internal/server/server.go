@@ -8,30 +8,33 @@ import (
 	"os/signal"
 	"syscall"
 
-	supbot "github.com/anvh2/trading-bot/internal/bot/support-bot"
+	ftbinc "github.com/adshao/go-binance/v2/futures"
+	"github.com/anvh2/trading-bot/internal/bot"
 	"github.com/anvh2/trading-bot/internal/cache"
 	cf "github.com/anvh2/trading-bot/internal/config"
 	"github.com/anvh2/trading-bot/internal/crawler"
 	"github.com/anvh2/trading-bot/internal/logger"
-	"github.com/anvh2/trading-bot/internal/models"
+	"github.com/anvh2/trading-bot/internal/notify"
+	"github.com/anvh2/trading-bot/internal/service/futures"
 	"github.com/anvh2/trading-bot/internal/storage"
-	"github.com/anvh2/trading-bot/internal/worker"
+	"github.com/anvh2/trading-bot/internal/trader"
 	"github.com/go-redis/redis/v8"
 )
 
 type Server struct {
-	logger  *logger.Logger
-	config  *models.ExchangeConfig
-	crawler *crawler.Crawler
-	supbot  *supbot.TelegramBot
-	market  *cache.Market
-	notify  *storage.Notify
-	worker  *worker.Worker
-
-	quitPolling chan struct{}
+	logger   *logger.Logger
+	crawler  *crawler.Crawler
+	supbot   *bot.TelegramBot
+	market   *cache.Market
+	notifyDb *storage.Notify
+	notifyWr *notify.NotifyWorker
+	trader   *trader.Trader
+	tradeDb  *storage.Position
+	futures  *futures.Futures
+	binance  *ftbinc.Client
 }
 
-func NewServer(config *models.ExchangeConfig) *Server {
+func NewServer() *Server {
 	logger, err := logger.New("./tmp/log.log")
 	if err != nil {
 		log.Fatal("failed to init logger", err)
@@ -47,36 +50,46 @@ func NewServer(config *models.ExchangeConfig) *Server {
 		log.Fatal("failed to connect to redis", err)
 	}
 
-	notify := storage.NewNotify(logger, redisCli)
 	market := cache.NewMarket(cf.CandleLimit)
+	notifyDb := storage.NewNotify(logger, redisCli)
+	tradeDb := storage.NewPosition(logger, redisCli)
 
-	supbot, err := supbot.NewTelegramBot(logger, "5629721774:AAH0Uq1xuqw7oKPSVQrNIDjeT8EgZgMuMZg")
+	supbot, err := bot.NewTelegramBot(logger, os.Getenv("TELE_BOT_TOKEN"))
 	if err != nil {
 		log.Fatal("failed to new chat bot", err)
 	}
 
-	crawler := crawler.New(logger, config, market)
+	binance := ftbinc.NewClient(os.Getenv("BINANCE_API_KEY"), os.Getenv("BINANCE_SECRET_KEY"))
+	futures := futures.New(logger, binance, &futures.Config{ApiKey: os.Getenv("BINANCE_API_KEY"), SecretKey: os.Getenv("BINANCE_SECRET_KEY")})
+	crawler := crawler.New(logger, market, binance, futures)
 
 	server := &Server{
-		logger:      logger,
-		config:      config,
-		supbot:      supbot,
-		market:      market,
-		notify:      notify,
-		crawler:     crawler,
-		quitPolling: make(chan struct{}),
+		logger:   logger,
+		supbot:   supbot,
+		market:   market,
+		notifyDb: notifyDb,
+		tradeDb:  tradeDb,
+		crawler:  crawler,
+		futures:  futures,
+		binance:  binance,
 	}
 
 	server.supbot.Handle("/info", server.handleCommand)
-	server.worker = worker.New(logger, 256, server.ProcessData)
+	server.notifyWr = notify.New(logger, 64, server.ProcessNotify, server.NotifyPolling)
+	server.trader = trader.New(logger, 2, binance, server.ProcessTrading, server.TraderPolling)
+
 	return server
 }
 
 func (s *Server) Start() error {
-	s.crawler.Start()
-	s.worker.Start()
+	ready := s.crawler.Start()
 
-	go s.polling()
+	go func() {
+		<-ready
+		s.notifyWr.Start()
+		s.trader.Start()
+		s.logger.Info("[Start] start success and ready to trade")
+	}()
 
 	sigs := make(chan os.Signal, 1)
 	done := make(chan bool)
@@ -87,8 +100,8 @@ func (s *Server) Start() error {
 	go func() {
 		<-sigs
 		s.crawler.Stop()
-		s.worker.Stop()
-		close(s.quitPolling)
+		s.notifyWr.Stop()
+		s.trader.Stop()
 		close(done)
 	}()
 
