@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (c *Crawler) WarmUpSymbols() error {
+func (c *Crawler) warmUpSymbols() error {
 	resp, err := c.binance.NewExchangeInfoService().Do(context.Background())
 	if err != nil {
 		c.logger.Error("[Crawler][WarmUpSymbols] failed to get exchnage info", zap.Error(err))
@@ -35,7 +35,7 @@ func (c *Crawler) WarmUpSymbols() error {
 	return nil
 }
 
-func (c *Crawler) WarmUpCache() error {
+func (c *Crawler) warmUpCache() error {
 	wg := &sync.WaitGroup{}
 
 	for _, interval := range config.Intervals {

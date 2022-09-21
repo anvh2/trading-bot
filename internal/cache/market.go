@@ -2,9 +2,7 @@ package cache
 
 import (
 	"errors"
-	"sync"
-
-	"github.com/anvh2/trading-bot/internal/cache/circular"
+	"hash/fnv"
 )
 
 var (
@@ -13,23 +11,24 @@ var (
 )
 
 type Market struct {
-	mutex   *sync.Mutex
-	symbols []string
-	cache   map[string]*Chart // map[symbol]chart
-	limit   int32
+	symbols   []string
+	cache     []*Chart
+	intervals []string
+	limit     int32
 }
 
-func NewMarket(limit int32) *Market {
+func NewMarket(intervals []string, limit int32) *Market {
 	return &Market{
-		mutex:   &sync.Mutex{},
-		symbols: []string{},
-		cache:   make(map[string]*Chart),
-		limit:   limit,
+		symbols:   []string{},
+		cache:     []*Chart{},
+		intervals: intervals,
+		limit:     limit,
 	}
 }
 
 func (c *Market) CacheSymbols(symbols []string) {
 	c.symbols = symbols
+	c.cache = make([]*Chart, len(symbols))
 }
 
 func (c *Market) Symbols() []string {
@@ -37,53 +36,43 @@ func (c *Market) Symbols() []string {
 }
 
 func (c *Market) Chart(symbol string) (*Chart, error) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	idx := c.indexing(symbol)
 
-	if c.cache[symbol] == nil {
+	if c.cache[idx] == nil {
 		return nil, ErrorChartNotFound
 	}
 
-	return c.cache[symbol], nil
+	return c.cache[idx], nil
 }
 
 func (c *Market) CreateChart(symbol string) *Chart {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	idx := c.indexing(symbol)
 
-	if c.cache[symbol] == nil {
+	if c.cache[idx] == nil {
 		market := new(Chart)
-		c.cache[symbol] = market.Init(symbol, c.limit)
+		c.cache[idx] = market.Init(symbol, c.intervals, c.limit)
 	}
 
-	return c.cache[symbol]
+	return c.cache[idx]
 }
 
 func (c *Market) UpdateChart(symbol string) *Chart {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	idx := c.indexing(symbol)
 
-	if c.cache[symbol] == nil {
+	if c.cache[idx] == nil {
 		market := new(Chart)
-		c.cache[symbol] = market.Init(symbol, c.limit)
+		c.cache[idx] = market.Init(symbol, c.intervals, c.limit)
 	}
 
-	return c.cache[symbol]
+	return c.cache[idx]
 }
 
-func (c *Market) Candles(symbol, interval string) *circular.Cache {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+func (c *Market) indexing(symbol string) int {
+	return int(hash(symbol)) % len(c.symbols)
+}
 
-	if c.cache[symbol] == nil {
-		market := new(Chart)
-		c.cache[symbol] = market.Init(symbol, c.limit)
-	}
-
-	candles := c.cache[symbol].cache[interval]
-	if candles == nil {
-		candles = circular.New(c.limit)
-	}
-
-	return candles
+func hash(s string) uint32 {
+	h := fnv.New32a()
+	h.Write([]byte(s))
+	return h.Sum32()
 }

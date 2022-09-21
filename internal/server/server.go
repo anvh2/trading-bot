@@ -35,7 +35,7 @@ type Server struct {
 }
 
 func NewServer() *Server {
-	logger, err := logger.New("./tmp/log.log")
+	logger, err := logger.New("./logs/server.log")
 	if err != nil {
 		log.Fatal("failed to init logger", err)
 	}
@@ -50,7 +50,7 @@ func NewServer() *Server {
 		log.Fatal("failed to connect to redis", err)
 	}
 
-	market := cache.NewMarket(cf.CandleLimit)
+	market := cache.NewMarket(cf.Intervals, cf.CandleLimit)
 	notifyDb := storage.NewNotify(logger, redisCli)
 	tradeDb := storage.NewPosition(logger, redisCli)
 

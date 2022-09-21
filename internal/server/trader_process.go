@@ -65,16 +65,16 @@ func (s *Server) ProcessTrading(ctx context.Context, message *models.Oscillator)
 
 	s.logger.Info("[ProcessTrading] make orders success", zap.Any("orders", orders))
 
-	resp, err := s.futures.CreateOrders(ctx, orders)
-	if err != nil {
-		s.logger.Error("[ProcessTrading] failed to create orders", zap.Any("orders", orders), zap.Error(err))
-		return err
-	}
+	// resp, err := s.futures.CreateOrders(ctx, orders)
+	// if err != nil {
+	// 	s.logger.Error("[ProcessTrading] failed to create orders", zap.Any("orders", orders), zap.Error(err))
+	// 	return err
+	// }
 
 	positionCount++
 
 	s.supbot.PushNotify(ctx, config.TelegramUserId, fmt.Sprintf("Create Orders Success: %s", message.Symbol))
-	s.logger.Info("[ProcessTrading] create order success", zap.Any("resp", resp))
+	// s.logger.Info("[ProcessTrading] create order success", zap.Any("resp", resp))
 
 	return nil
 }

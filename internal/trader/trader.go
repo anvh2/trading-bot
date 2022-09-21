@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type Polling func()
+type Polling func(ctx context.Context)
 type Process func(ctx context.Context, message *models.Oscillator) error
 
 type Trader struct {
@@ -57,7 +57,10 @@ func (t *Trader) Start() {
 				for {
 					select {
 					case message := <-t.notify:
-						t.process(context.Background(), message)
+						ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+						defer cancel()
+
+						t.process(ctx, message)
 
 					case <-t.quit:
 						return
@@ -86,7 +89,10 @@ func (t *Trader) Start() {
 				for {
 					select {
 					case <-ticker.C:
-						t.polling()
+						ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+						defer cancel()
+
+						t.polling(ctx)
 
 					case <-t.quit:
 						return

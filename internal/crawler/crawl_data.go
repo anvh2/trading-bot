@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (c *Crawler) CrawlData() error {
+func (c *Crawler) crawlData() error {
 	for _, interval := range config.Intervals {
 		pair := make(map[string]string, len(c.market.Symbols()))
 		for _, symbol := range c.market.Symbols() {

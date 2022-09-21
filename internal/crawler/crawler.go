@@ -32,11 +32,11 @@ func New(logger *logger.Logger, market *cache.Market, binance *binance.Client, f
 func (c *Crawler) Start() chan bool {
 	ready := make(chan bool)
 
-	c.WarmUpSymbols()
+	c.warmUpSymbols()
 
 	go func() {
-		c.WarmUpCache()
-		c.CrawlData()
+		c.warmUpCache()
+		c.crawlData()
 		ready <- true
 	}()
 

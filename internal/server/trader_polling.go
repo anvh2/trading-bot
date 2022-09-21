@@ -1,5 +1,7 @@
 package server
 
-func (s *Server) TraderPolling() {
+import "context"
+
+func (s *Server) TraderPolling(ctx context.Context) {
 
 }

@@ -3,3 +3,4 @@ Library
 .cache
 tmp
 .vscode
+logs
