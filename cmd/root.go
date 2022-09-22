@@ -1,72 +1,60 @@
-// Copyright © 2017 Alessandro Sanino <saninoale@gmail.com>
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see <http://www.gnu.org/licenses/>.
-
-package bot
+package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
-	"os/signal"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
+
+var cfgFile string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:   "gobot",
-	Short: fmt.Sprintf("USAGE %s [OPTIONS]", os.Args[0]),
-	Long:  fmt.Sprintf(`USAGE %s [OPTIONS] : see --help for details`, os.Args[0]),
-	Run:   executeRootCommand,
+	Use:     "trading-bot",
+	Short:   "trading-bot service",
+	Long:    "trading-bot service",
+	Version: "0.0.0",
 }
 
-var version string
+// SetVersion inject version from git
+func SetVersion(r string) {
+	if len(r) > 0 {
+		RootCmd.Version = r
+	}
+	viper.SetDefault("service_version", RootCmd.Version)
+}
 
-// Execute adds all child commands to the root command sets flags appropriately.
+// Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 }
 
-func SetVersion(v string) {
-	version = v
-}
-
 func init() {
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt)
-
-	go func() {
-		<-signals
-		signal.Stop(signals)
-		fmt.Println()
-		fmt.Println("CTRL-C command received. Exiting...")
-		os.Exit(0)
-	}()
-
-	RootCmd.Flags().BoolVarP(&rootFlags.Version, "version", "V", false, "show version information.")
-
-	RootCmd.PersistentFlags().CountVarP(&GlobalFlags.Verbose, "verbose", "v", "show verbose information when trading : use multiple times to increase verbosity level.")
-	RootCmd.PersistentFlags().StringVar(&GlobalFlags.ConfigFile, "config", "config.yaml", "Config file path (default : config.yaml)")
+	cobra.OnInitialize(initConfig)
+	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is config.toml)")
 }
 
-func executeRootCommand(cmd *cobra.Command, args []string) {
-	if rootFlags.Version {
-		fmt.Printf("Golang Crypto Trading Bot v. %s\n", version)
+func initConfig() {
+	if cfgFile != "" {
+		viper.SetConfigFile(cfgFile)
 	} else {
-		cmd.Help()
+		viper.SetConfigName("config.loc")
 	}
+
+	viper.AddConfigPath(".")
+	viper.AutomaticEnv()
+	viper.SetConfigType("toml")
+
+	if err := viper.ReadInConfig(); err != nil {
+		log.Fatalf("Cannot read config file: %s", err)
+	}
+
+	fmt.Println("Using config file:", viper.ConfigFileUsed())
 }

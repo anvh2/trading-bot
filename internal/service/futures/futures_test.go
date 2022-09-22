@@ -12,7 +12,7 @@ import (
 )
 
 func TestCreateOrders(t *testing.T) {
-	f := New(logger.NewDev(), nil, &Config{ApiKey: "tshhh50wl5HeGOkDXuA4soO81AWyX3AztDb9KoedzZuQ1CSpVidXllJAJzPhXGUB", SecretKey: "KGzctvmH5tsAm4GMTKxbVMwPFybnqIgWBH2rtVgalwyJpM1H2Qax7hyvnYH5i8hy"})
+	f := New(logger.NewDev(), nil, &Config{ApiKey: "24a91b0057cd5df6f3fa4c9e059511670d84951b8b1e4cb3eb725b75b7a855bc", SecretKey: "c6fcd23215be8e792ce8262e5f2c180abdb4aa9ec832d1c54bacad90e0437ae7"})
 
 	resp, err := f.CreateOrders(context.Background(), []*models.Order{
 		{

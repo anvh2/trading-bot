@@ -13,7 +13,7 @@ import (
 )
 
 func (f *Futures) GetCurrentPrice(ctx context.Context, symbol string) (*futures.SymbolPrice, error) {
-	url := fmt.Sprintf("https://fapi.binance.com/fapi/v1/ticker/price?symbol=%s", symbol)
+	url := fmt.Sprintf("%s/fapi/v1/ticker/price?symbol=%s", f.baseUrl, symbol)
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -55,6 +55,10 @@ func (f *Futures) ListCandlesticks(ctx context.Context, symbol, interval string,
 	res, err := f.client.Do(req)
 	if err != nil {
 		return []*binance.Kline{}, err
+	}
+
+	if res.StatusCode != 200 {
+		return []*binance.Kline{}, fmt.Errorf("binance: failed, make request with code %d", res.StatusCode)
 	}
 
 	data, err := ioutil.ReadAll(res.Body)

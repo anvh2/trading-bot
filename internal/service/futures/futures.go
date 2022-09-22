@@ -16,7 +16,7 @@ import (
 )
 
 func (f *Futures) CreateOrders(ctx context.Context, orders []*models.Order) ([]*CreateOrderResp, error) {
-	fullURL := "https://fapi.binance.com/fapi/v1/batchOrders"
+	fullURL := fmt.Sprintf("%s/fapi/v1/batchOrders", f.baseUrl)
 
 	ordersMap := make([]map[string]interface{}, len(orders))
 

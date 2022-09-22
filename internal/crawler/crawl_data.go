@@ -6,13 +6,13 @@ import (
 
 	"github.com/adshao/go-binance/v2"
 	"github.com/anvh2/trading-bot/internal/cache"
-	"github.com/anvh2/trading-bot/internal/config"
 	"github.com/anvh2/trading-bot/internal/models"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
-func (c *Crawler) CrawlData() error {
-	for _, interval := range config.Intervals {
+func (c *Crawler) crawlData() error {
+	for _, interval := range viper.GetStringSlice("market.intervals") {
 		pair := make(map[string]string, len(c.market.Symbols()))
 		for _, symbol := range c.market.Symbols() {
 			pair[symbol] = interval

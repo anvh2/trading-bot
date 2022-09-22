@@ -53,6 +53,9 @@ func (l *Cache) Last() (interface{}, int32) {
 		return nil, -1
 	}
 
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
 	var idx int32
 
 	if l.idx == 0 {

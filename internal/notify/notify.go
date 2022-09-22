@@ -24,16 +24,22 @@ type NotifyWorker struct {
 	size    int32
 }
 
-func New(logger *logger.Logger, size int32, process Process, polling Polling) *NotifyWorker {
+func New(logger *logger.Logger, size int32) *NotifyWorker {
 	return &NotifyWorker{
 		logger:  logger,
-		process: process,
-		polling: polling,
 		message: make(chan *models.Chart, size/4),
 		quit:    make(chan struct{}),
 		wait:    &sync.WaitGroup{},
 		size:    size,
 	}
+}
+
+func (w *NotifyWorker) WithPolling(polling Polling) {
+	w.polling = polling
+}
+
+func (w *NotifyWorker) WithProcess(process Process) {
+	w.process = process
 }
 
 func (w *NotifyWorker) Start() error {

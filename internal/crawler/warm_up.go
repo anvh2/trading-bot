@@ -7,12 +7,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anvh2/trading-bot/internal/config"
 	"github.com/anvh2/trading-bot/internal/models"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
+
+	"golang.org/x/time/rate"
 )
 
-func (c *Crawler) WarmUpSymbols() error {
+func (c *Crawler) warmUpSymbols() error {
 	resp, err := c.binance.NewExchangeInfoService().Do(context.Background())
 	if err != nil {
 		c.logger.Error("[Crawler][WarmUpSymbols] failed to get exchnage info", zap.Error(err))
@@ -35,10 +37,15 @@ func (c *Crawler) WarmUpSymbols() error {
 	return nil
 }
 
-func (c *Crawler) WarmUpCache() error {
+func (c *Crawler) warmUpCache() error {
 	wg := &sync.WaitGroup{}
 
-	for _, interval := range config.Intervals {
+	limit := rate.NewLimiter(
+		rate.Every(viper.GetDuration("binance.rate_limit.duration")),
+		viper.GetInt("binance.rate_limit.requests"),
+	)
+
+	for _, interval := range viper.GetStringSlice("market.intervals") {
 		wg.Add(1)
 
 		go func(interval string) {
@@ -50,8 +57,13 @@ func (c *Crawler) WarmUpCache() error {
 
 			defer wg.Done()
 
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+			defer cancel()
+
 			for _, symbol := range c.market.Symbols() {
-				resp, err := c.futures.ListCandlesticks(context.Background(), symbol, interval, int(config.CandleLimit))
+				limit.Wait(ctx)
+
+				resp, err := c.futures.ListCandlesticks(ctx, symbol, interval, viper.GetInt("chart.candles.limit"))
 				if err != nil {
 					c.logger.Error("[Crawler][WarmUpCache] failed to get klines data", zap.String("symbol", symbol), zap.String("interval", interval), zap.Error(err))
 					return
@@ -70,7 +82,6 @@ func (c *Crawler) WarmUpCache() error {
 				}
 
 				c.logger.Info("[Crawler][WarmUpCache] success", zap.String("symbol", symbol), zap.String("interval", interval), zap.Int("total", len(resp)))
-				time.Sleep(time.Millisecond * 500) // TODO: temporary rate limit for calling binance api, default allow 1200 per minute
 			}
 		}(interval)
 	}

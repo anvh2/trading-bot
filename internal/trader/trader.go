@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type Polling func()
+type Polling func(ctx context.Context)
 type Process func(ctx context.Context, message *models.Oscillator) error
 
 type Trader struct {
@@ -26,7 +26,7 @@ type Trader struct {
 	polling  Polling
 }
 
-func New(logger *logger.Logger, poolSize int32, binance *futures.Client, process Process, polling Polling) *Trader {
+func New(logger *logger.Logger, poolSize int32, binance *futures.Client) *Trader {
 	return &Trader{
 		logger:   logger,
 		notify:   make(chan *models.Oscillator),
@@ -34,9 +34,15 @@ func New(logger *logger.Logger, poolSize int32, binance *futures.Client, process
 		poolSize: poolSize,
 		wait:     &sync.WaitGroup{},
 		quit:     make(chan struct{}),
-		process:  process,
-		polling:  polling,
 	}
+}
+
+func (t *Trader) WithPolling(polling Polling) {
+	t.polling = polling
+}
+
+func (t *Trader) WithProcess(process Process) {
+	t.process = process
 }
 
 func (t *Trader) Start() {
@@ -57,7 +63,10 @@ func (t *Trader) Start() {
 				for {
 					select {
 					case message := <-t.notify:
-						t.process(context.Background(), message)
+						ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+						defer cancel()
+
+						t.process(ctx, message)
 
 					case <-t.quit:
 						return
@@ -86,7 +95,10 @@ func (t *Trader) Start() {
 				for {
 					select {
 					case <-ticker.C:
-						t.polling()
+						ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+						defer cancel()
+
+						t.polling(ctx)
 
 					case <-t.quit:
 						return

@@ -43,11 +43,6 @@ func (t *TelegramBot) Handle(command string, handler func(ctx context.Context, a
 			return err
 		}
 
-		// bytes, err := json.Marshal(resp)
-		// if err != nil {
-		// 	return err
-		// }
-
 		return ctx.Send(resp)
 	})
 }

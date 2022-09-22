@@ -1,8 +1,0 @@
-exchange_config:
-  name: binance
-  public_key: abc@123
-  secret_key: abc@123
-  deposit_addresses:
-    BTC: binance_deposit_address_btc
-    ETH: binance_deposit_address_eth
-    ZEC: binance_deposit_address_zec

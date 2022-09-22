@@ -17,5 +17,5 @@ deploy: build rsync
 	ssh root@165.22.103.161 sh /server/$(BIN)/runserver restart
 
 local:
-	rm tmp/log.log
-	go run main.go start --config config.yaml
+	rm -f tmp/server.log
+	go run main.go start --config config.dev.toml
