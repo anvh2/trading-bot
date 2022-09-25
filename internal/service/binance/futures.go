@@ -1,4 +1,4 @@
-package futures
+package binance
 
 import (
 	"bytes"
@@ -12,11 +12,25 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/adshao/go-binance/v2/futures"
 	"github.com/anvh2/trading-bot/internal/models"
+	"github.com/spf13/viper"
 )
 
-func (f *Futures) CreateOrders(ctx context.Context, orders []*models.Order) ([]*CreateOrderResp, error) {
-	fullURL := fmt.Sprintf("%s/fapi/v1/batchOrders", f.baseUrl)
+func (f *Binance) ListPositionRisk(ctx context.Context, symbol string) ([]*futures.PositionRisk, error) {
+	f.limiter.Wait(ctx)
+	return f.futures.NewGetPositionRiskService().Symbol(symbol).Do(ctx)
+}
+
+func (f *Binance) ListOpenOrders(ctx context.Context, symbol string) ([]*futures.Order, error) {
+	f.limiter.Wait(ctx)
+	return f.futures.NewListOpenOrdersService().Symbol(symbol).Do(ctx)
+}
+
+func (f *Binance) CreateOrders(ctx context.Context, orders []*models.Order) ([]*CreateOrderResp, error) {
+	f.limiter.Wait(ctx)
+
+	fullURL := fmt.Sprintf("%s/fapi/v1/batchOrders", viper.GetString("binance.config.futures.order_url")) // TODO: use testnet for test env
 
 	ordersMap := make([]map[string]interface{}, len(orders))
 
@@ -69,8 +83,6 @@ func (f *Futures) CreateOrders(ctx context.Context, orders []*models.Order) ([]*
 		return nil, err
 	}
 
-	fmt.Println(string(b))
-
 	params := map[string]interface{}{
 		"batchOrders": string(b),
 		"timestamp":   time.Now().UnixMilli(),
@@ -89,10 +101,10 @@ func (f *Futures) CreateOrders(ctx context.Context, orders []*models.Order) ([]*
 	body := bytes.NewBufferString(bodyStr)
 
 	header := http.Header{}
-	header.Set("X-MBX-APIKEY", f.config.ApiKey)
+	header.Set("X-MBX-APIKEY", viper.GetString("binance.config.futures.api_key"))
 	header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	mac := hmac.New(sha256.New, []byte(f.config.SecretKey))
+	mac := hmac.New(sha256.New, []byte(viper.GetString("binance.config.futures.secret_key")))
 	_, err = mac.Write([]byte(bodyStr))
 	if err != nil {
 		return nil, err
@@ -110,6 +122,7 @@ func (f *Futures) CreateOrders(ctx context.Context, orders []*models.Order) ([]*
 	if err != nil {
 		return nil, err
 	}
+
 	req = req.WithContext(ctx)
 	req.Header = header
 

@@ -7,8 +7,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-func (s *Server) NotifyPolling(idx int32) {
-	for _, symbol := range s.market.Symbols() {
+func (s *Server) NotifyPolling(ctx context.Context, idx int32) {
+	for _, symbol := range s.exchange.Symbols() {
 		chart, err := s.market.Chart(symbol)
 		if err != nil {
 			break

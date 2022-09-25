@@ -1,4 +1,4 @@
-package futures
+package binance
 
 import (
 	"context"
@@ -10,10 +10,18 @@ import (
 	"github.com/adshao/go-binance/v2"
 	"github.com/adshao/go-binance/v2/futures"
 	"github.com/bitly/go-simplejson"
+	"github.com/spf13/viper"
 )
 
-func (f *Futures) GetCurrentPrice(ctx context.Context, symbol string) (*futures.SymbolPrice, error) {
-	url := fmt.Sprintf("%s/fapi/v1/ticker/price?symbol=%s", f.baseUrl, symbol)
+func (f *Binance) GetExchangeInfo(ctx context.Context) (*futures.ExchangeInfo, error) {
+	f.limiter.Wait(ctx)
+	return f.futures.NewExchangeInfoService().Do(ctx)
+}
+
+func (f *Binance) GetCurrentPrice(ctx context.Context, symbol string) (*futures.SymbolPrice, error) {
+	f.limiter.Wait(ctx)
+
+	url := fmt.Sprintf("%s/fapi/v1/ticker/price?symbol=%s", viper.GetString("binance.config.futures.feed_url"), symbol)
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -42,7 +50,9 @@ func (f *Futures) GetCurrentPrice(ctx context.Context, symbol string) (*futures.
 	return price, nil
 }
 
-func (f *Futures) ListCandlesticks(ctx context.Context, symbol, interval string, limit int) ([]*binance.Kline, error) {
+func (f *Binance) ListCandlesticks(ctx context.Context, symbol, interval string, limit int) ([]*binance.Kline, error) {
+	// f.limiter.Wait(ctx)
+
 	url := fmt.Sprintf("https://www.binance.com/fapi/v1/continuousKlines?limit=%d&pair=%s&contractType=PERPETUAL&interval=%s", limit, symbol, interval)
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)

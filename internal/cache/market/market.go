@@ -1,39 +1,24 @@
-package cache
+package market
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/anvh2/trading-bot/internal/cache/circular"
-)
-
-var (
-	ErrorChartNotFound   = errors.New("chart: not found")
-	ErrorCandlesNotFound = errors.New("candles: not found")
+	"github.com/anvh2/trading-bot/internal/cache/errors"
 )
 
 type Market struct {
-	mutex   *sync.Mutex
-	symbols []string
-	cache   map[string]*Chart // map[symbol]chart
-	limit   int32
+	mutex *sync.Mutex
+	cache map[string]*Chart // map[symbol]chart
+	limit int32
 }
 
 func NewMarket(limit int32) *Market {
 	return &Market{
-		mutex:   &sync.Mutex{},
-		symbols: []string{},
-		cache:   make(map[string]*Chart),
-		limit:   limit,
+		mutex: &sync.Mutex{},
+		cache: make(map[string]*Chart),
+		limit: limit,
 	}
-}
-
-func (c *Market) CacheSymbols(symbols []string) {
-	c.symbols = symbols
-}
-
-func (c *Market) Symbols() []string {
-	return c.symbols
 }
 
 func (c *Market) Chart(symbol string) (*Chart, error) {
@@ -41,7 +26,7 @@ func (c *Market) Chart(symbol string) (*Chart, error) {
 	defer c.mutex.Unlock()
 
 	if c.cache[symbol] == nil {
-		return nil, ErrorChartNotFound
+		return nil, errors.ErrorChartNotFound
 	}
 
 	return c.cache[symbol], nil

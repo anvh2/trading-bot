@@ -1,4 +1,4 @@
-package futures
+package binance
 
 type Error struct {
 	Code int    `json:"code,omitempty"`

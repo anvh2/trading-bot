@@ -7,22 +7,22 @@ import (
 )
 
 type Order struct {
-	Symbol           string
-	Side             futures.SideType
-	PositionSide     futures.PositionSideType
-	OrderType        futures.OrderType
-	TimeInForce      futures.TimeInForceType
-	Quantity         string
-	ReduceOnly       bool
-	Price            string
-	NewClientOrderId string // callback id
-	StopPrice        string
-	WorkingType      futures.WorkingType
-	ActivationPrice  string
-	CallbackRate     string
-	PriceProtect     bool
-	NewOrderRespType futures.NewOrderRespType
-	ClosePosition    bool
+	Symbol           string                   `json:"symbol,omitempty"`
+	Side             futures.SideType         `json:"side,omitempty"`
+	PositionSide     futures.PositionSideType `json:"position_side,omitempty"`
+	OrderType        futures.OrderType        `json:"order_type,omitempty"`
+	TimeInForce      futures.TimeInForceType  `json:"time_in_force,omitempty"`
+	Quantity         string                   `json:"quantity,omitempty"`
+	ReduceOnly       bool                     `json:"reduce_only,omitempty"`
+	Price            string                   `json:"price,omitempty"`
+	NewClientOrderId string                   `json:"new_client_order_id,omitempty"`
+	StopPrice        string                   `json:"stop_price,omitempty"`
+	WorkingType      futures.WorkingType      `json:"working_type,omitempty"`
+	ActivationPrice  string                   `json:"activation_price,omitempty"`
+	CallbackRate     string                   `json:"callback_rate,omitempty"`
+	PriceProtect     bool                     `json:"price_protect,omitempty"`
+	NewOrderRespType futures.NewOrderRespType `json:"new_order_resp_type,omitempty"`
+	ClosePosition    bool                     `json:"close_position,omitempty"`
 }
 
 func (o *Order) String() string {

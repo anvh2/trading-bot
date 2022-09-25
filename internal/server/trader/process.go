@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/adshao/go-binance/v2"
 	"github.com/adshao/go-binance/v2/futures"
 	"github.com/anvh2/trading-bot/internal/helpers"
+	"github.com/anvh2/trading-bot/internal/indicator"
 	"github.com/anvh2/trading-bot/internal/models"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -16,16 +18,18 @@ var (
 	positionCount = 0
 )
 
-func (s *Server) ProcessTrading(ctx context.Context, message *models.Oscillator) error {
+func (s *Server) ProcessTrading(ctx context.Context, msg interface{}) error {
+	message := msg.(*models.Oscillator)
+
 	if err := validateTradingMessage(message); err != nil {
 		return err
 	}
 
 	if positionCount > 2 {
-		return nil
+		return errors.New("trading: can't trade any more")
 	}
 
-	openPositions, err := s.binance.NewGetPositionRiskService().Symbol(message.Symbol).Do(ctx)
+	openPositions, err := s.binance.ListPositionRisk(ctx, message.Symbol)
 	if err != nil {
 		s.logger.Error("[ProcessTrading] failed to get positions", zap.String("symbol", message.Symbol), zap.Error(err))
 		return err
@@ -35,7 +39,7 @@ func (s *Server) ProcessTrading(ctx context.Context, message *models.Oscillator)
 		return nil
 	}
 
-	openOrders, err := s.binance.NewListOpenOrdersService().Symbol(message.Symbol).Do(ctx)
+	openOrders, err := s.binance.ListOpenOrders(ctx, message.Symbol)
 	if err != nil {
 		s.logger.Error("[ProcessTrading] failed to get orders", zap.String("symbol", message.Symbol), zap.Error(err))
 		return err
@@ -45,27 +49,28 @@ func (s *Server) ProcessTrading(ctx context.Context, message *models.Oscillator)
 		return nil
 	}
 
-	symbolPrice, err := s.futures.GetCurrentPrice(ctx, message.Symbol)
+	symbolPrice, err := s.binance.GetCurrentPrice(ctx, message.Symbol)
 	if err != nil {
 		s.logger.Error("[ProcessTrading] failed to get current symbol price", zap.Any("symbol", message.Symbol), zap.Error(err))
 		return err
 	}
 
-	candles, err := s.binance.NewKlinesService().Symbol(message.Symbol).Interval("1h").Limit(2).Do(ctx)
+	candles, err := s.binance.ListCandlesticks(ctx, message.Symbol, "1h", 2)
 	if err != nil {
 		s.logger.Error("[ProcessTrading] failed to get candles", zap.String("symbol", message.Symbol), zap.Error(err))
 		return err
 	}
 
-	orders, err := makeOrders(message.Symbol, symbolPrice.Price, candles, message.Stoch["1h"])
+	orders, err := s.makeOrders(message.Symbol, symbolPrice.Price, candles, message.Stoch["1h"])
 	if err != nil {
 		s.logger.Info("[ProcessTrading] failed to make orders", zap.String("price", symbolPrice.Price), zap.Any("candles", candles), zap.Any("stoch", message.Stoch["1h"]), zap.Error(err))
 		return err
 	}
 
-	s.logger.Info("[ProcessTrading] make orders success", zap.Any("orders", orders))
+	s.logger.Info("[ProcessTrading] make orders success", zap.String("symbol", message.Symbol), zap.String("price", symbolPrice.Price),
+		zap.Any("candles", candles), zap.Any("stoch", message.Stoch["1h"]), zap.Any("orders", orders))
 
-	resp, err := s.futures.CreateOrders(ctx, orders)
+	resp, err := s.binance.CreateOrders(ctx, orders)
 	if err != nil {
 		s.logger.Error("[ProcessTrading] failed to create orders", zap.Any("orders", orders), zap.Error(err))
 		return err
@@ -73,7 +78,7 @@ func (s *Server) ProcessTrading(ctx context.Context, message *models.Oscillator)
 
 	positionCount++
 
-	s.supbot.PushNotify(ctx, viper.GetInt64("notify_channels.orders_creation"), fmt.Sprintf("Create Orders Success: %s", message.Symbol))
+	s.supbot.PushNotify(ctx, viper.GetInt64("notify.channels.orders_creation"), fmt.Sprintf("Create Orders Success: %s", message.Symbol))
 	s.logger.Info("[ProcessTrading] create order success", zap.Any("resp", resp))
 
 	return nil
@@ -95,34 +100,32 @@ func checkExistPosition(positions []*futures.PositionRisk) bool {
 	return false
 }
 
-func makeOrders(symbol string, currentPrice string, candles []*futures.Kline, stoch *models.Stoch) ([]*models.Order, error) {
+func (s *Server) makeOrders(symbol string, currentPrice string, candles []*binance.Kline, stoch *models.Stoch) ([]*models.Order, error) {
 	if stoch == nil {
 		return nil, errors.New("orders: empty stoch")
 	}
 
-	if stoch.RSI < 80 || stoch.RSI > 15 {
-		return nil, errors.New("orders: rsi not ready to trade")
-	}
-
-	if (stoch.K < 85 || stoch.K > 15) &&
-		(stoch.D < 85 || stoch.D > 15) {
-		return nil, errors.New("orders: K and D not ready to trade")
+	if !indicator.WithinRangeBound(stoch, indicator.RangeBoundReadyTrade) {
+		return nil, errors.New("orders: indicator not ready to trade")
 	}
 
 	var (
-		sideType     futures.SideType
-		closeSide    futures.SideType
-		positionSide futures.PositionSideType
+		sideType  futures.SideType
+		closeSide futures.SideType
 	)
 
-	if stoch.RSI >= 80 && stoch.K >= 85 && stoch.D >= 85 {
+	positionSide, err := indicator.ResolvePositionSide(stoch, indicator.RangeBoundReadyTrade)
+	if err != nil {
+		return nil, err
+	}
+
+	switch positionSide {
+	case futures.PositionSideTypeShort:
 		sideType = futures.SideTypeSell
 		closeSide = futures.SideTypeBuy
-		positionSide = futures.PositionSideTypeShort
-	} else if stoch.RSI <= 15 && stoch.K <= 15 && stoch.D <= 15 {
+	case futures.PositionSideTypeLong:
 		sideType = futures.SideTypeBuy
 		closeSide = futures.SideTypeSell
-		positionSide = futures.PositionSideTypeLong
 	}
 
 	if len(candles) < 2 {
@@ -130,12 +133,16 @@ func makeOrders(symbol string, currentPrice string, candles []*futures.Kline, st
 	}
 
 	const (
-		gain = 70.0
-		loss = 50.0
+		longGain  = 1.7
+		longLoss  = 0.5
+		shortGain = 0.5
+		shortLoss = 1.5
 	)
 
 	var (
-		entryPrice float64
+		entryPrice      float64
+		takeProfitPrice float64
+		stopLossPrice   float64
 	)
 
 	switch positionSide {
@@ -144,8 +151,11 @@ func makeOrders(symbol string, currentPrice string, candles []*futures.Kline, st
 
 		current := helpers.StringToFloat(currentPrice)
 		if entryPrice < current {
-			entryPrice = current * 0.01
+			entryPrice = current * 1.01
 		}
+
+		takeProfitPrice = entryPrice * shortGain
+		stopLossPrice = entryPrice * shortLoss
 
 	case futures.PositionSideTypeLong:
 		entryPrice = helpers.AddFloat(candles[0].Low, candles[1].Low, currentPrice) / 3.0
@@ -154,6 +164,25 @@ func makeOrders(symbol string, currentPrice string, candles []*futures.Kline, st
 		if entryPrice > current {
 			entryPrice = current * 0.99
 		}
+
+		takeProfitPrice = entryPrice * longGain
+		stopLossPrice = entryPrice * shortGain
+
+	}
+
+	exchange, err := s.exchange.Get(symbol)
+	if err != nil {
+		return nil, err
+	}
+
+	priceFilter, err := exchange.GetPriceFilter()
+	if err != nil {
+		return nil, err
+	}
+
+	lotFilter, err := exchange.GetLotSizeFilter()
+	if err != nil {
+		return nil, err
 	}
 
 	orders := []*models.Order{
@@ -164,8 +193,8 @@ func makeOrders(symbol string, currentPrice string, candles []*futures.Kline, st
 			PositionSide:     positionSide,
 			OrderType:        futures.OrderTypeLimit,
 			TimeInForce:      futures.TimeInForceTypeGTC,
-			Quantity:         helpers.Div("10", currentPrice),
-			Price:            fmt.Sprint(entryPrice),
+			Quantity:         helpers.AlignQuantityToString(calculateQuantity(entryPrice, 20), lotFilter.StepSize),
+			Price:            helpers.AlignPriceToString(entryPrice, priceFilter.TickSize),
 			WorkingType:      futures.WorkingTypeMarkPrice,
 			NewOrderRespType: futures.NewOrderRespTypeRESULT,
 		},
@@ -175,8 +204,8 @@ func makeOrders(symbol string, currentPrice string, candles []*futures.Kline, st
 			PositionSide:     positionSide,
 			OrderType:        futures.OrderTypeLimit,
 			TimeInForce:      futures.TimeInForceTypeGTC,
-			Quantity:         helpers.Div("20", currentPrice),
-			Price:            fmt.Sprint(entryPrice * 1.03),
+			Quantity:         helpers.AlignQuantityToString(calculateQuantity(entryPrice*1.03, 30), lotFilter.StepSize),
+			Price:            helpers.AlignPriceToString(entryPrice*1.03, priceFilter.TickSize),
 			WorkingType:      futures.WorkingTypeMarkPrice,
 			NewOrderRespType: futures.NewOrderRespTypeRESULT,
 		},
@@ -186,8 +215,8 @@ func makeOrders(symbol string, currentPrice string, candles []*futures.Kline, st
 			PositionSide:     positionSide,
 			OrderType:        futures.OrderTypeLimit,
 			TimeInForce:      futures.TimeInForceTypeGTC,
-			Quantity:         helpers.Div("30", currentPrice),
-			Price:            fmt.Sprint(entryPrice * 1.03 * 1.03),
+			Quantity:         helpers.AlignQuantityToString(calculateQuantity(entryPrice*1.03*1.03, 40), lotFilter.StepSize),
+			Price:            helpers.AlignPriceToString(entryPrice*1.03*1.03, priceFilter.TickSize),
 			WorkingType:      futures.WorkingTypeMarkPrice,
 			NewOrderRespType: futures.NewOrderRespTypeRESULT,
 		},
@@ -198,9 +227,8 @@ func makeOrders(symbol string, currentPrice string, candles []*futures.Kline, st
 			PositionSide:     positionSide,
 			OrderType:        futures.OrderTypeTakeProfitMarket,
 			TimeInForce:      futures.TimeInForceTypeGTC,
-			Quantity:         fmt.Sprint(resolveQuantity(entryPrice*loss, 60)),
-			Price:            fmt.Sprint(entryPrice * gain),
-			StopPrice:        fmt.Sprint(entryPrice * gain),
+			Quantity:         helpers.AlignQuantityToString(calculateStopQuantity(entryPrice, 60), lotFilter.StepSize),
+			StopPrice:        helpers.AlignPriceToString(takeProfitPrice, priceFilter.TickSize),
 			WorkingType:      futures.WorkingTypeMarkPrice,
 			NewOrderRespType: futures.NewOrderRespTypeRESULT,
 		},
@@ -211,8 +239,8 @@ func makeOrders(symbol string, currentPrice string, candles []*futures.Kline, st
 			PositionSide:     positionSide,
 			OrderType:        futures.OrderTypeStopMarket,
 			TimeInForce:      futures.TimeInForceTypeGTC,
-			Quantity:         fmt.Sprint(resolveQuantity(entryPrice*loss, 60)),
-			StopPrice:        fmt.Sprint(entryPrice * loss),
+			Quantity:         helpers.AlignQuantityToString(calculateStopQuantity(entryPrice, 60), lotFilter.StepSize),
+			StopPrice:        helpers.AlignPriceToString(stopLossPrice, priceFilter.TickSize),
 			WorkingType:      futures.WorkingTypeMarkPrice,
 			NewOrderRespType: futures.NewOrderRespTypeRESULT,
 		},
@@ -220,6 +248,10 @@ func makeOrders(symbol string, currentPrice string, candles []*futures.Kline, st
 	return orders, nil
 }
 
-func resolveQuantity(price float64, totalAmount float64) float64 {
+func calculateQuantity(price, amount float64) float64 {
+	return amount / price
+}
+
+func calculateStopQuantity(price float64, totalAmount float64) float64 {
 	return totalAmount / price
 }

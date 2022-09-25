@@ -4,15 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/anvh2/trading-bot/internal/logger"
 	"github.com/go-redis/redis/v8"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
-)
-
-const (
-	expirationNotify time.Duration = 10 * time.Minute
 )
 
 var (
@@ -38,7 +34,7 @@ func NewNotify(logger *logger.Logger, db *redis.Client) *Notify {
 func (s *Notify) Create(ctx context.Context, notifyId string) error {
 	key := fmt.Sprintf(keyNotify, notifyId)
 
-	effected, err := s.db.SetNX(ctx, key, "", expirationNotify).Result()
+	effected, err := s.db.SetNX(ctx, key, "", viper.GetDuration("notify.config.expiration")).Result()
 	if err != nil {
 		s.logger.Error("[Storage][CreateNotify] failed to set oscillator to redis", zap.Any("notifyId", notifyId), zap.Error(err))
 		return err

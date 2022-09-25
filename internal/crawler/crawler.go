@@ -1,10 +1,9 @@
 package crawler
 
 import (
-	binance "github.com/adshao/go-binance/v2/futures"
 	"github.com/anvh2/trading-bot/internal/cache"
 	"github.com/anvh2/trading-bot/internal/logger"
-	"github.com/anvh2/trading-bot/internal/service/futures"
+	"github.com/anvh2/trading-bot/internal/service/binance"
 )
 
 var (
@@ -12,20 +11,25 @@ var (
 )
 
 type Crawler struct {
-	logger  *logger.Logger
-	binance *binance.Client
-	futures *futures.Futures
-	market  *cache.Market
-	quit    chan struct{}
+	logger   *logger.Logger
+	binance  *binance.Binance
+	market   cache.Market
+	exchange cache.Exchange
+	quit     chan struct{}
 }
 
-func New(logger *logger.Logger, market *cache.Market, binance *binance.Client, futures *futures.Futures) *Crawler {
+func New(
+	logger *logger.Logger,
+	market cache.Market,
+	exchange cache.Exchange,
+	binance *binance.Binance,
+) *Crawler {
 	return &Crawler{
-		logger:  logger,
-		binance: binance,
-		futures: futures,
-		market:  market,
-		quit:    make(chan struct{}),
+		logger:   logger,
+		binance:  binance,
+		market:   market,
+		exchange: exchange,
+		quit:     make(chan struct{}),
 	}
 }
 

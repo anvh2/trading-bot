@@ -5,10 +5,10 @@ import (
 )
 
 type Server struct {
-	market *cache.Market
+	market cache.Market
 }
 
-func New(market *cache.Market) *Server {
+func New(market cache.Market) *Server {
 	return &Server{
 		market: market,
 	}

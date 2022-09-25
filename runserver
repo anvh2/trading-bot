@@ -4,7 +4,7 @@
 export HOME=`pwd`
 export APPNAME=`basename $HOME`
 export APPPORT=55000
-export CONF=config.yaml
+export CONF=config.prod.toml
 pid_file=tmp/$APPNAME.pid
 log_file=tmp/$APPNAME.log
 

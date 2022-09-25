@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/adshao/go-binance/v2"
-	"github.com/anvh2/trading-bot/internal/cache"
+	"github.com/anvh2/trading-bot/internal/cache/errors"
 	"github.com/anvh2/trading-bot/internal/models"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -13,8 +13,8 @@ import (
 
 func (c *Crawler) crawlData() error {
 	for _, interval := range viper.GetStringSlice("market.intervals") {
-		pair := make(map[string]string, len(c.market.Symbols()))
-		for _, symbol := range c.market.Symbols() {
+		pair := make(map[string]string, len(c.exchange.Symbols()))
+		for _, symbol := range c.exchange.Symbols() {
 			pair[symbol] = interval
 		}
 
@@ -27,7 +27,7 @@ func (c *Crawler) crawlData() error {
 
 			done, _, err := binance.WsCombinedKlineServe(pair, c.handleKlinesStreamData, c.handleKlinesStreamError)
 			if err != nil {
-				c.logger.Error("[Crawler][CrawlData] failed to connect to klines stream data", zap.Error(err))
+				c.logger.Fatal("[Crawler][CrawlData] failed to connect to klines stream data", zap.Error(err))
 				return
 			}
 
@@ -42,12 +42,12 @@ func (c *Crawler) crawlData() error {
 
 func (c *Crawler) handleKlinesStreamData(event *binance.WsKlineEvent) {
 	chart, err := c.market.Chart(event.Symbol)
-	if err == cache.ErrorChartNotFound {
+	if err == errors.ErrorChartNotFound {
 		chart = c.market.CreateChart(event.Symbol)
 	}
 
 	candles, err := chart.Candles(event.Kline.Interval)
-	if err == cache.ErrorCandlesNotFound {
+	if err == errors.ErrorCandlesNotFound {
 		return
 	}
 

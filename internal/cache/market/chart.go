@@ -1,10 +1,11 @@
-package cache
+package market
 
 import (
 	"sync"
 	"time"
 
 	"github.com/anvh2/trading-bot/internal/cache/circular"
+	"github.com/anvh2/trading-bot/internal/cache/errors"
 	"github.com/anvh2/trading-bot/internal/models"
 )
 
@@ -35,7 +36,7 @@ func (m *Chart) Candles(interval string) (*circular.Cache, error) {
 	defer m.mutex.RUnlock()
 
 	if m.cache[interval] == nil {
-		return nil, ErrorCandlesNotFound
+		return nil, errors.ErrorCandlesNotFound
 	}
 
 	return m.cache[interval], nil
@@ -60,7 +61,7 @@ func (m *Chart) UpdateCandle(interval string, candleId int32, candle *models.Can
 	defer m.mutex.Unlock()
 
 	if m.cache[interval] == nil {
-		return ErrorCandlesNotFound
+		return errors.ErrorCandlesNotFound
 	}
 
 	m.cache[interval].Update(candleId, candle)

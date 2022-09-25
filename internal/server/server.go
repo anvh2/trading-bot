@@ -8,33 +8,35 @@ import (
 	"os/signal"
 	"syscall"
 
-	binance "github.com/adshao/go-binance/v2/futures"
 	"github.com/anvh2/trading-bot/internal/bot"
 	"github.com/anvh2/trading-bot/internal/cache"
+	"github.com/anvh2/trading-bot/internal/cache/exchange"
+	"github.com/anvh2/trading-bot/internal/cache/market"
 	"github.com/anvh2/trading-bot/internal/crawler"
+	"github.com/anvh2/trading-bot/internal/indicator"
 	"github.com/anvh2/trading-bot/internal/logger"
-	"github.com/anvh2/trading-bot/internal/notify"
 	analyzeHandler "github.com/anvh2/trading-bot/internal/server/analyze"
 	notifyHandler "github.com/anvh2/trading-bot/internal/server/notify"
 	traderHandler "github.com/anvh2/trading-bot/internal/server/trader"
-	"github.com/anvh2/trading-bot/internal/service/futures"
+	"github.com/anvh2/trading-bot/internal/service/binance"
 	"github.com/anvh2/trading-bot/internal/storage"
-	"github.com/anvh2/trading-bot/internal/trader"
+	"github.com/anvh2/trading-bot/internal/worker"
 	"github.com/go-redis/redis/v8"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 type Server struct {
 	logger   *logger.Logger
 	crawler  *crawler.Crawler
 	supbot   *bot.TelegramBot
-	market   *cache.Market
+	market   cache.Market
+	exchange cache.Exchange
 	notifyDb *storage.Notify
-	notify   *notify.NotifyWorker
-	trader   *trader.Trader
+	analyze  *worker.Worker
+	trader   *worker.Worker
 	tradeDb  *storage.Position
-	futures  *futures.Futures
-	binance  *binance.Client
+	binance  *binance.Binance
 }
 
 func NewServer() *Server {
@@ -53,7 +55,8 @@ func NewServer() *Server {
 		log.Fatal("failed to connect to redis", err)
 	}
 
-	market := cache.NewMarket(viper.GetInt32("chart.candles.limit"))
+	market := market.NewMarket(viper.GetInt32("chart.candles.limit"))
+	exchange := exchange.New(logger)
 	notifyDb := storage.NewNotify(logger, redisCli)
 	tradeDb := storage.NewPosition(logger, redisCli)
 
@@ -62,45 +65,55 @@ func NewServer() *Server {
 		log.Fatal("failed to new chat bot", err)
 	}
 
-	binance := binance.NewClient(viper.GetString("binance.config.api_key"), viper.GetString("binance.config.secret_key"))
-	futures := futures.New(logger, binance, &futures.Config{ApiKey: viper.GetString("binance.config.api_key"), SecretKey: viper.GetString("binance.config.secret_key")})
-	crawler := crawler.New(logger, market, binance, futures)
-	notify := notify.New(logger, viper.GetInt32("notify_worker.size"))
-	trader := trader.New(logger, viper.GetInt32("trader.size"), binance)
+	binance := binance.New(logger)
+	crawler := crawler.New(logger, market, exchange, binance)
+
+	analyze, err := worker.New(logger, &worker.PoolSize{Process: viper.GetInt32("notify.worker.size"), Polling: viper.GetInt32("notify.worker.size")})
+	if err != nil {
+		log.Fatal("failed to new notify worker", zap.Error(err))
+	}
+
+	trader, err := worker.New(logger, &worker.PoolSize{Process: viper.GetInt32("trader.size"), Polling: viper.GetInt32("trader.size")})
+	if err != nil {
+		log.Fatal("failed to new trading worker", zap.Error(err))
+	}
 
 	return &Server{
 		logger:   logger,
 		supbot:   supbot,
 		market:   market,
+		exchange: exchange,
 		notifyDb: notifyDb,
-		notify:   notify,
+		analyze:  analyze,
 		tradeDb:  tradeDb,
 		crawler:  crawler,
-		futures:  futures,
 		binance:  binance,
 		trader:   trader,
 	}
 }
 
 func (s *Server) Setup() error {
+	indicator.SetUp()
+
 	notifySrv := notifyHandler.New(s.market)
 	s.supbot.Handle("/info", notifySrv.ProcessAnalyzeCommand)
 
 	analyzeHandler := analyzeHandler.New(
 		s.supbot,
 		s.market,
+		s.exchange,
 		s.notifyDb,
-		s.notify,
+		s.analyze,
 		s.trader,
 	)
 
-	s.notify.WithPolling(analyzeHandler.NotifyPolling)
-	s.notify.WithProcess(analyzeHandler.ProcessNotify)
+	s.analyze.WithPolling(analyzeHandler.NotifyPolling)
+	s.analyze.WithProcess(analyzeHandler.ProcessNotify)
 
 	traderHandler := traderHandler.New(
 		s.logger,
+		s.exchange,
 		s.supbot,
-		s.futures,
 		s.binance,
 	)
 
@@ -115,7 +128,7 @@ func (s *Server) Start() error {
 
 	go func() {
 		<-ready
-		s.notify.Start()
+		s.analyze.Start()
 		s.trader.Start()
 		s.logger.Info("[Start] start success and ready to trade")
 	}()
@@ -129,7 +142,7 @@ func (s *Server) Start() error {
 	go func() {
 		<-sigs
 		s.crawler.Stop()
-		s.notify.Stop()
+		s.analyze.Stop()
 		s.trader.Stop()
 		close(done)
 	}()

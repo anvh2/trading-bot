@@ -45,17 +45,17 @@ const (
 )
 
 type Position struct {
-	PositionId       string         `json:"position_id"`
-	Symbol           string         `json:"symbol"`
-	Status           PositionStatus `json:"status"`
-	EntryPrice       string         `json:"entry_price"`
-	LiquidationPrice string         `json:"liquidation_price"`
-	MarkPrice        string         `json:"mark_price"`
-	MarginType       MarginType     `json:"margin_type"`
-	PositionSide     PositionSide   `json:"position_side"`
-	IsolatedWallet   string         `json:"isolated_wallet"`
-	UnRealizedProfit string         `json:"un_realized_profit"`
-	Leverage         string         `json:"leverage"`
+	PositionId       string         `json:"position_id,omitempty"`
+	Symbol           string         `json:"symbol,omitempty"`
+	Status           PositionStatus `json:"status,omitempty"`
+	EntryPrice       string         `json:"entry_price,omitempty"`
+	LiquidationPrice string         `json:"liquidation_price,omitempty"`
+	MarkPrice        string         `json:"mark_price,omitempty"`
+	MarginType       MarginType     `json:"margin_type,omitempty"`
+	PositionSide     PositionSide   `json:"position_side,omitempty"`
+	IsolatedWallet   string         `json:"isolated_wallet,omitempty"`
+	UnRealizedProfit string         `json:"un_realized_profit,omitempty"`
+	Leverage         string         `json:"leverage,omitempty"`
 }
 
 func (p *Position) String() string {

@@ -8,13 +8,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anvh2/trading-bot/internal/helpers"
 	"github.com/anvh2/trading-bot/internal/indicator"
 	"github.com/anvh2/trading-bot/internal/models"
 	"github.com/spf13/viper"
 )
 
-func (s *Server) ProcessNotify(ctx context.Context, message *models.Chart) error {
+func (s *Server) ProcessNotify(ctx context.Context, data interface{}) error {
+	message := data.(*models.Chart)
+
 	if err := validateNotifyMessage(message); err != nil {
 		return err
 	}
@@ -52,8 +53,8 @@ func (s *Server) ProcessNotify(ctx context.Context, message *models.Chart) error
 		oscillator.Stoch[interval] = stoch
 	}
 
-	if !helpers.CheckIndicatorIsReadyToTrade(oscillator) {
-		return errors.New("not ready to trade")
+	if !indicator.WithinRangeBound(oscillator.Stoch["1h"], indicator.RangeBoundRecommend) {
+		return errors.New("analyze: not ready to trade")
 	}
 
 	msg := fmt.Sprintf("%s\t\t\t latency: +%0.4f(s)\n", message.Symbol, float64((time.Now().UnixMilli()-message.UpdateTime))/1000.0)
@@ -61,7 +62,7 @@ func (s *Server) ProcessNotify(ctx context.Context, message *models.Chart) error
 	for _, interval := range viper.GetStringSlice("market.intervals") {
 		stoch, ok := oscillator.Stoch[interval]
 		if !ok {
-			return errors.New("stoch in interval invalid")
+			return errors.New("analyze: stoch in interval invalid")
 		}
 
 		msg += fmt.Sprintf("\t%03s:\t RSI %2.2f | K %02.2f | D %02.2f\n", strings.ToUpper(interval), stoch.RSI, stoch.K, stoch.D)
@@ -71,8 +72,8 @@ func (s *Server) ProcessNotify(ctx context.Context, message *models.Chart) error
 		return err
 	}
 
-	s.trader.SendNotify(ctx, oscillator)
-	s.supbot.PushNotify(ctx, viper.GetInt64("notify_channels.futures_recommendation"), msg)
+	s.trader.SendJob(ctx, oscillator)
+	s.supbot.PushNotify(ctx, viper.GetInt64("notify.channels.futures_recommendation"), msg)
 
 	return nil
 }

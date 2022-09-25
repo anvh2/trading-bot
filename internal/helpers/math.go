@@ -10,6 +10,10 @@ func StringToFloat(val string) float64 {
 	return result
 }
 
+func FloatToString(val float64) string {
+	return fmt.Sprintf("%.4f", val)
+}
+
 func AddFloat(data ...string) float64 {
 	result := 0.0
 	for _, val := range data {
@@ -19,8 +23,12 @@ func AddFloat(data ...string) float64 {
 	return result / float64(len(data))
 }
 
-func Div(fraction, numerator string) string {
+func DivFloatToString(fraction, numerator string) string {
 	f, _ := strconv.ParseFloat(fraction, 64)
 	n, _ := strconv.ParseFloat(numerator, 64)
-	return fmt.Sprint(f / n)
+	return fmt.Sprintf("%.4f", f/n)
+}
+
+func MulFloatToString(a, b float64) string {
+	return fmt.Sprintf("%.4f", a*b)
 }
