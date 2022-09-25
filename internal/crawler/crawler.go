@@ -28,6 +28,7 @@ type Crawler struct {
 	market   cache.Market
 	exchange cache.Exchange
 	retry    chan *Symbol
+	counter  int32
 	quit     chan struct{}
 }
 
@@ -68,6 +69,12 @@ func (c *Crawler) Start() chan bool {
 		for {
 			select {
 			case symbol := <-c.retry:
+				c.counter++
+				if c.counter == 100 {
+					c.counter = 0
+					time.Sleep(30 * time.Minute)
+				}
+
 				resp, err := c.binance.ListCandlesticks(context.Background(), symbol.Symbol, symbol.Interval, viper.GetInt("chart.candles.limit"))
 				if err != nil {
 					c.logger.Error("[Crawler][Retry] failed to get klines data", zap.String("symbol", symbol.Symbol), zap.String("interval", symbol.Interval), zap.Error(err))
