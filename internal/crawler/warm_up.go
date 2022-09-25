@@ -3,6 +3,7 @@ package crawler
 import (
 	"context"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 
@@ -22,6 +23,10 @@ func (c *Crawler) warmUpSymbols() error {
 	selected := []*exchange.Symbol{}
 
 	for _, symbol := range resp.Symbols {
+		if strings.Contains(symbol.Symbol, "_") {
+			continue
+		}
+
 		if symbol.MarginAsset == "USDT" {
 			if blacklist[symbol.Symbol] {
 				continue
@@ -67,6 +72,7 @@ func (c *Crawler) warmUpCache() error {
 				resp, err := c.binance.ListCandlesticks(ctx, symbol, interval, viper.GetInt("chart.candles.limit"))
 				if err != nil {
 					c.logger.Error("[Crawler][WarmUpCache] failed to get klines data", zap.String("symbol", symbol), zap.String("interval", interval), zap.Error(err))
+					c.retry <- &Symbol{Symbol: symbol, Interval: interval}
 					continue
 				}
 

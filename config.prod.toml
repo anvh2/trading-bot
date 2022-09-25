@@ -23,7 +23,7 @@
       api_key = "24a91b0057cd5df6f3fa4c9e059511670d84951b8b1e4cb3eb725b75b7a855bc" # testnet
       secret_key = "c6fcd23215be8e792ce8262e5f2c180abdb4aa9ec832d1c54bacad90e0437ae7" # testnet
 
-    [binance.config.production] # read only
+    [binance.config.exchange] # read only
       api_key = "S1adYzFTy1Xoa8VAN98rT6R5QCYGTZYkfdMCzI3gcyU5yxuTPYxmpqC0ompwVLP3"
       secret_key = "9FRWjhJErghBU7BhbO412RV6WwU9ErEsWy7e0Idf6V5OEu3PTH3zvNicZ3SW2ZV3"
 
