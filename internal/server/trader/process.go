@@ -2,6 +2,7 @@ package trader
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -14,24 +15,27 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	positionCount = 0
-)
-
-func (s *Server) ProcessTrading(ctx context.Context, msg interface{}) error {
-	message := msg.(*models.Oscillator)
-
-	if err := validateTradingMessage(message); err != nil {
+func (s *Server) Process(ctx context.Context, data interface{}) error {
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		s.logger.Error("[Process] failed to marshal message", zap.Error(err))
 		return err
 	}
 
-	if positionCount > 2 {
-		return errors.New("trading: can't trade any more")
+	message := &models.Oscillator{}
+
+	if err := json.Unmarshal(bytes, message); err != nil {
+		s.logger.Error("[Process] failed to unmarshal message", zap.Error(err))
+		return err
+	}
+
+	if err := validateMessage(message); err != nil {
+		return err
 	}
 
 	openPositions, err := s.binance.ListPositionRisk(ctx, message.Symbol)
 	if err != nil {
-		s.logger.Error("[ProcessTrading] failed to get positions", zap.String("symbol", message.Symbol), zap.Error(err))
+		s.logger.Error("[Process] failed to get positions", zap.String("symbol", message.Symbol), zap.Error(err))
 		return err
 	}
 
@@ -41,7 +45,7 @@ func (s *Server) ProcessTrading(ctx context.Context, msg interface{}) error {
 
 	openOrders, err := s.binance.ListOpenOrders(ctx, message.Symbol)
 	if err != nil {
-		s.logger.Error("[ProcessTrading] failed to get orders", zap.String("symbol", message.Symbol), zap.Error(err))
+		s.logger.Error("[Process] failed to get orders", zap.String("symbol", message.Symbol), zap.Error(err))
 		return err
 	}
 
@@ -51,40 +55,38 @@ func (s *Server) ProcessTrading(ctx context.Context, msg interface{}) error {
 
 	symbolPrice, err := s.binance.GetCurrentPrice(ctx, message.Symbol)
 	if err != nil {
-		s.logger.Error("[ProcessTrading] failed to get current symbol price", zap.Any("symbol", message.Symbol), zap.Error(err))
+		s.logger.Error("[Process] failed to get current symbol price", zap.Any("symbol", message.Symbol), zap.Error(err))
 		return err
 	}
 
 	candles, err := s.binance.ListCandlesticks(ctx, message.Symbol, "1h", 2)
 	if err != nil {
-		s.logger.Error("[ProcessTrading] failed to get candles", zap.String("symbol", message.Symbol), zap.Error(err))
+		s.logger.Error("[Process] failed to get candles", zap.String("symbol", message.Symbol), zap.Error(err))
 		return err
 	}
 
 	orders, err := s.makeOrders(message.Symbol, symbolPrice.Price, candles, message.Stoch["1h"])
 	if err != nil {
-		s.logger.Info("[ProcessTrading] failed to make orders", zap.String("price", symbolPrice.Price), zap.Any("candles", candles), zap.Any("stoch", message.Stoch["1h"]), zap.Error(err))
+		s.logger.Info("[Process] failed to make orders", zap.String("price", symbolPrice.Price), zap.Any("candles", candles), zap.Any("stoch", message.Stoch["1h"]), zap.Error(err))
 		return err
 	}
 
-	s.logger.Info("[ProcessTrading] make orders success", zap.String("symbol", message.Symbol), zap.String("price", symbolPrice.Price),
+	s.logger.Info("[Process] make orders success", zap.String("symbol", message.Symbol), zap.String("price", symbolPrice.Price),
 		zap.Any("candles", candles), zap.Any("stoch", message.Stoch["1h"]), zap.Any("orders", orders))
 
 	resp, err := s.binance.CreateOrders(ctx, orders)
 	if err != nil {
-		s.logger.Error("[ProcessTrading] failed to create orders", zap.Any("orders", orders), zap.Error(err))
+		s.logger.Error("[Process] failed to create orders", zap.Any("orders", orders), zap.Error(err))
 		return err
 	}
 
-	positionCount++
+	s.notifyBot.PushNotify(ctx, viper.GetInt64("notify.channels.orders_creation"), fmt.Sprintf("Create Orders Success: %s", message.Symbol))
 
-	s.supbot.PushNotify(ctx, viper.GetInt64("notify.channels.orders_creation"), fmt.Sprintf("Create Orders Success: %s", message.Symbol))
-	s.logger.Info("[ProcessTrading] create order success", zap.Any("resp", resp))
-
+	s.logger.Info("[Process] create order success", zap.Any("resp", resp))
 	return nil
 }
 
-func validateTradingMessage(message *models.Oscillator) error {
+func validateMessage(message *models.Oscillator) error {
 	if message == nil {
 		return errors.New("trading: message invalid")
 	}

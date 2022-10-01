@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package v1.notifier;
+
+option go_package = "api/v1/notifier;notifier";
+
+import "google/protobuf/empty.proto";
+
+service NotifierService {
+    rpc Push(PushRequest) returns (google.protobuf.Empty);
+}
+
+message PushRequest {
+    string channel = 1;
+    string message = 2;
+}
+

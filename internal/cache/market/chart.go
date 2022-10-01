@@ -56,17 +56,16 @@ func (m *Chart) CreateCandle(interval string, candle *models.Candlestick) error 
 	return nil
 }
 
-func (m *Chart) UpdateCandle(interval string, candleId int32, candle *models.Candlestick) error {
+func (m *Chart) UpdateCandle(interval string, candleId int32, candle *models.Candlestick) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
 	if m.cache[interval] == nil {
-		return errors.ErrorCandlesNotFound
+		m.cache[interval] = circular.New(m.limit)
 	}
 
 	m.cache[interval].Update(candleId, candle)
 	m.meta.UpdateTime = time.Now().UnixMilli()
-	return nil
 }
 
 func (m *Chart) GetUpdateTime() int64 {

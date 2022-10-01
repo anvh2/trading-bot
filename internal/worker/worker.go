@@ -14,9 +14,9 @@ import (
 type Polling func(ctx context.Context, idx int32)
 type Process func(ctx context.Context, message interface{}) error
 
-type PoolSize struct {
-	Process int32
-	Polling int32
+type PoolConfig struct {
+	NumProcess int32
+	NumPolling int32
 }
 
 type Worker struct {
@@ -26,22 +26,22 @@ type Worker struct {
 	message chan interface{}
 	quit    chan struct{}
 	wait    *sync.WaitGroup
-	size    *PoolSize
+	config  *PoolConfig
 }
 
-func New(logger *logger.Logger, poolSize *PoolSize) (*Worker, error) {
-	if poolSize == nil {
-		return nil, errors.New("worker: poolsize invalid")
+func New(logger *logger.Logger, config *PoolConfig) (*Worker, error) {
+	if config == nil {
+		return nil, errors.New("worker: config invalid")
 	}
 
-	buffer := poolSize.Process / 2
+	buffer := config.NumProcess / 2
 
 	return &Worker{
 		logger:  logger,
 		message: make(chan interface{}, buffer),
 		quit:    make(chan struct{}),
 		wait:    &sync.WaitGroup{},
-		size:    poolSize,
+		config:  config,
 	}, nil
 }
 
@@ -56,7 +56,7 @@ func (w *Worker) WithProcess(process Process) {
 func (w *Worker) Start() error {
 	// start worker
 	go func() {
-		for i := int32(0); i < w.size.Process; i++ {
+		for i := int32(0); i < w.config.NumProcess; i++ {
 			w.wait.Add(1)
 
 			go func() {
@@ -88,7 +88,7 @@ func (w *Worker) Start() error {
 
 	// start poller
 	go func() {
-		for i := int32(0); i < w.size.Polling; i++ {
+		for i := int32(0); i < w.config.NumPolling; i++ {
 			w.wait.Add(1)
 
 			go func(idx int32) {

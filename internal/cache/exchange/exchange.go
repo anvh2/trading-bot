@@ -5,7 +5,6 @@ import (
 
 	"github.com/anvh2/trading-bot/internal/cache/errors"
 	"github.com/anvh2/trading-bot/internal/logger"
-	"go.uber.org/zap"
 )
 
 type Exchange struct {
@@ -33,8 +32,6 @@ func (c *Exchange) Set(symbols []*Symbol) {
 		c.symbols[idx] = symbol.Symbol
 		c.internal[symbol.Symbol] = symbol
 	}
-
-	c.logger.Info("[Cache][Exchange][Set] success", zap.Any("symbols", symbols), zap.Any("data", c.internal))
 }
 
 func (c *Exchange) Get(symbol string) (*Symbol, error) {

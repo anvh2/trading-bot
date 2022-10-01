@@ -1,15 +1,13 @@
 #!/bin/sh
 #
 # Startup script for Main
-export HOME=`pwd`
-export APPNAME=`basename $HOME`
-export APPPORT=55000
+export APPNAME="trading-bot"
 export CONF=config.prod.toml
 pid_file=tmp/$APPNAME.pid
 log_file=tmp/$APPNAME.log
 
 # Arguments to pass to the service
-PARAMS=" start \
+PARAMS=" $2 \
         --config $CONF"
 
 is_running () {
@@ -19,10 +17,10 @@ is_running () {
 case "$1" in
     start)
         # Main startup
-        echo -n "Starting $APPNAME (port $APPPORT): "
+        echo -n "Starting $APPNAME: "
         exec ./$APPNAME $PARAMS > $log_file 2>&1 &
         [ ! -z $pid_file ] && echo $! > $pid_file
-        echo "OK"
+        echo "OK. Check your stdout logs"
         ;;
     stop)
         # Main shutdown
@@ -30,7 +28,7 @@ case "$1" in
             echo "Service stopped"
             exit 1
         fi
-        echo -n "Shutdown $APPNAME (port $APPPORT): "
+        echo -n "Shutdown $APPNAME: "
         while is_running;
         do
             kill `cat $pid_file`

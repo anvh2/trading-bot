@@ -7,17 +7,17 @@ import (
 
 //CandleStick represents a single candlestick in a chart.
 type Candlestick struct {
-	OpenTime  int64
-	CloseTime int64
-	High      string //Represents the highest value obtained during candle period.
-	Open      string //Represents the first value of the candle period.
-	Close     string //Represents the last value of the candle period.
-	Low       string //Represents the lowest value obtained during candle period.
-	Volume    string //Represents the volume of trades during the candle period.
+	OpenTime  int64  `json:"ot,omitempty"`
+	CloseTime int64  `json:"ct,omitempty"`
+	High      string `json:"h,omitempty"`
+	Open      string `json:"o,omitempty"`
+	Close     string `json:"c,omitempty"`
+	Low       string `json:"l,omitempty"`
+	Volume    string `json:"v,omitempty"`
 }
 
 // String returns the string representation of the object.
-func (cs Candlestick) String() string {
+func (cs *Candlestick) String() string {
 	b, _ := json.Marshal(cs)
 	return string(b)
 }
@@ -26,4 +26,9 @@ type Chart struct {
 	Symbol     string                    `json:"symbol"`
 	Candles    map[string][]*Candlestick `json:"candlesticks"`
 	UpdateTime int64                     `json:"update_time"`
+}
+
+func (chart *Chart) String() string {
+	b, _ := json.Marshal(chart)
+	return string(b)
 }

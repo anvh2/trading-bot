@@ -1,7 +1,9 @@
 package cmd
 
 import (
-	"github.com/anvh2/trading-bot/internal/server"
+	"errors"
+	"fmt"
+
 	"github.com/spf13/cobra"
 )
 
@@ -11,12 +13,8 @@ var startCmd = &cobra.Command{
 	Short: "Start order-status-consumer service",
 	Long:  "Start order-status-consumer service",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		server := server.NewServer()
-		if err := server.Setup(); err != nil {
-			return err
-		}
-
-		return server.Start()
+		fmt.Println("Please input your service name ...")
+		return errors.New("invalid arguments")
 	},
 }
 
