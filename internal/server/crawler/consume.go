@@ -4,7 +4,7 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/adshao/go-binance/v2"
+	"github.com/adshao/go-binance/v2/futures"
 	"github.com/anvh2/trading-bot/internal/cache/errors"
 	"github.com/anvh2/trading-bot/internal/models"
 	"github.com/spf13/viper"
@@ -25,7 +25,7 @@ func (s *Server) consume() error {
 				}
 			}()
 
-			done, _, err := binance.WsCombinedKlineServe(pair, s.handleConsumeCandles, s.handleConsumeError)
+			done, _, err := futures.WsCombinedKlineServe(pair, s.handleConsumeCandles, s.handleConsumeError)
 			if err != nil {
 				s.logger.Fatal("[Consume] failed to connect to klines stream data", zap.Error(err))
 				return
@@ -40,7 +40,13 @@ func (s *Server) consume() error {
 	return nil
 }
 
-func (s *Server) handleConsumeCandles(event *binance.WsKlineEvent) {
+func (s *Server) handleConsumeCandles(event *futures.WsKlineEvent) {
+	_, err := s.exchange.Get(event.Symbol)
+	if err == errors.ErrorSymbolNotFound {
+		s.logger.Info("[Consume] no need to handle this symbol", zap.String("symbol", event.Symbol))
+		return
+	}
+
 	chart, err := s.market.Chart(event.Symbol)
 	if err == errors.ErrorChartNotFound {
 		chart = s.market.CreateChart(event.Symbol)

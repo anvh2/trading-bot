@@ -20,12 +20,12 @@ import (
 )
 
 type Server struct {
-	logger    *logger.Logger
-	notifyDb  *storage.Notify
-	subcriber pubsub.Subscriber
-	publisher pubsub.Publisher
-	worker    *worker.Worker
-	notifier  notifier.NotifierServiceClient
+	logger     *logger.Logger
+	notifyDb   *storage.Notify
+	subscriber pubsub.Subscriber
+	publisher  pubsub.Publisher
+	worker     *worker.Worker
+	notifier   notifier.NotifierServiceClient
 }
 
 func New() *Server {
@@ -57,19 +57,19 @@ func New() *Server {
 	notifier := notifier.NewNotifierServiceClient(conn)
 
 	return &Server{
-		logger:    logger,
-		notifyDb:  notifyDb,
-		subcriber: subscriber,
-		publisher: publisher,
-		worker:    worker,
-		notifier:  notifier,
+		logger:     logger,
+		notifyDb:   notifyDb,
+		subscriber: subscriber,
+		publisher:  publisher,
+		worker:     worker,
+		notifier:   notifier,
 	}
 }
 
 func (s *Server) Start() error {
 	s.worker.WithProcess(s.Process)
 
-	s.subcriber.Subscribe(
+	s.subscriber.Subscribe(
 		context.Background(),
 		"trading.channel.analyze",
 		func(ctx context.Context, message interface{}) error {
@@ -90,7 +90,7 @@ func (s *Server) Start() error {
 		<-sigs
 		s.notifyDb.Close()
 		s.publisher.Close()
-		s.subcriber.Close()
+		s.subscriber.Close()
 		s.worker.Stop()
 
 		close(done)

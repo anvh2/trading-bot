@@ -50,10 +50,11 @@ func (pb *PubSub) Subscribe(ctx context.Context, channel string, process Process
 			default:
 				msg, err := subscriber.ReceiveMessage(ctx)
 				if err != nil {
-					panic(err)
+					pb.logger.Error("[Subscribe] failed to receive message", zap.Error(err))
+					continue
 				}
 
-				process(ctx, msg)
+				process(ctx, msg.Payload)
 			}
 		}
 	}()

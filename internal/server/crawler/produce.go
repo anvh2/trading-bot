@@ -14,7 +14,7 @@ func (s *Server) produce() {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				s.logger.Error("[Crawler][Produce] failed to process", zap.Any("error", r), zap.String("stacktrace", string(debug.Stack())))
+				s.logger.Error("[Produce] failed to process", zap.Any("error", r), zap.String("stacktrace", string(debug.Stack())))
 			}
 		}()
 

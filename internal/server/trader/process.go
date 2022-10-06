@@ -16,15 +16,9 @@ import (
 )
 
 func (s *Server) Process(ctx context.Context, data interface{}) error {
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		s.logger.Error("[Process] failed to marshal message", zap.Error(err))
-		return err
-	}
-
 	message := &models.Oscillator{}
 
-	if err := json.Unmarshal(bytes, message); err != nil {
+	if err := json.Unmarshal([]byte(fmt.Sprint(data)), message); err != nil {
 		s.logger.Error("[Process] failed to unmarshal message", zap.Error(err))
 		return err
 	}

@@ -5,6 +5,7 @@ import (
 	"runtime/debug"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/anvh2/trading-bot/internal/cache/exchange"
@@ -63,7 +64,11 @@ func (s *Server) crawlExchange() error {
 }
 
 func (s *Server) crawlMarkets() error {
-	wg := &sync.WaitGroup{}
+	var (
+		wg    = &sync.WaitGroup{}
+		total = int32(0)
+		start = time.Now()
+	)
 
 	for _, interval := range viper.GetStringSlice("market.intervals") {
 		wg.Add(1)
@@ -100,6 +105,7 @@ func (s *Server) crawlMarkets() error {
 					s.market.UpdateChart(symbol).CreateCandle(interval, candle)
 				}
 
+				atomic.AddInt32(&total, 1)
 				s.logger.Info("[Crawl] cache market success", zap.String("symbol", symbol), zap.String("interval", interval), zap.Int("total", len(resp)))
 				time.Sleep(1000 * time.Millisecond)
 			}
@@ -108,6 +114,6 @@ func (s *Server) crawlMarkets() error {
 
 	wg.Wait()
 
-	s.logger.Info("[Crawl] success to crawl data")
+	s.logger.Info("[Crawl] success to crawl data", zap.Int32("total", total), zap.Float64("take(s)", time.Since(start).Seconds()))
 	return nil
 }
