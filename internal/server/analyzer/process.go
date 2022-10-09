@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/anvh2/trading-bot/internal/helpers"
 	"github.com/anvh2/trading-bot/internal/indicator"
 	"github.com/anvh2/trading-bot/internal/models"
 	"github.com/anvh2/trading-bot/pkg/api/v1/notifier"
@@ -71,7 +72,7 @@ func (s *Server) Process(ctx context.Context, data interface{}) error {
 
 	// s.publisher.Publish(ctx, "trading.channel.trading", "") // TODO: review data
 
-	msg := fmt.Sprintf("%s\t\t\t latency: +%0.4f(s)\n", message.Symbol, float64((time.Now().UnixMilli()-message.UpdateTime))/1000.0)
+	msg := fmt.Sprintf("%s\t\t\t latest: -%0.4f(s)\n\t%s\n", message.Symbol, float64((time.Now().UnixMilli()-message.UpdateTime))/1000.0, helpers.ResolvePositionSide(oscillator.GetRSI()))
 
 	for _, interval := range viper.GetStringSlice("market.intervals") {
 		stoch, ok := oscillator.Stoch[interval]

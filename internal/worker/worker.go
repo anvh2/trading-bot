@@ -68,13 +68,19 @@ func (w *Worker) Start() error {
 
 				defer w.wait.Done()
 
+				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				defer cancel()
+
 				for {
 					select {
-					case msg := <-w.message:
-						ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-						defer cancel()
+					case msg, ok := <-w.message:
+						if !ok {
+							continue
+						}
 
-						w.process(ctx, msg)
+						if w.process != nil {
+							w.process(ctx, msg)
+						}
 
 					case <-w.quit:
 						if len(w.message) == 0 {
@@ -100,15 +106,21 @@ func (w *Worker) Start() error {
 
 				defer w.wait.Done()
 
+				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				defer cancel()
+
 				ticker := time.NewTicker(time.Second)
 
 				for {
 					select {
-					case <-ticker.C:
-						ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-						defer cancel()
+					case _, ok := <-ticker.C:
+						if !ok {
+							continue
+						}
 
-						w.polling(ctx, idx)
+						if w.polling != nil {
+							w.polling(ctx, idx)
+						}
 
 					case <-w.quit:
 						return

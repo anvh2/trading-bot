@@ -37,8 +37,8 @@ case "$1" in
         echo "OK"
         ;;
     reload|restart)
-    $0 stop
-        $0 start
+        $0 stop
+        $0 start 
         ;;
     status)
         if is_running; then
