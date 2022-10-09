@@ -68,18 +68,11 @@ func (w *Worker) Start() error {
 
 				defer w.wait.Done()
 
-				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-				defer cancel()
-
 				for {
 					select {
 					case msg, ok := <-w.message:
-						if !ok {
-							continue
-						}
-
-						if w.process != nil {
-							w.process(ctx, msg)
+						if ok {
+							w.processMessage(msg)
 						}
 
 					case <-w.quit:
@@ -106,20 +99,13 @@ func (w *Worker) Start() error {
 
 				defer w.wait.Done()
 
-				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-				defer cancel()
-
 				ticker := time.NewTicker(time.Second)
 
 				for {
 					select {
 					case _, ok := <-ticker.C:
-						if !ok {
-							continue
-						}
-
-						if w.polling != nil {
-							w.polling(ctx, idx)
+						if ok {
+							w.pollingMessage(idx)
 						}
 
 					case <-w.quit:
@@ -141,4 +127,26 @@ func (w *Worker) Stop() {
 
 func (w *Worker) SendJob(ctx context.Context, message interface{}) {
 	w.message <- message
+}
+
+func (w *Worker) processMessage(message interface{}) {
+	if w.process == nil {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	w.process(ctx, message)
+}
+
+func (w *Worker) pollingMessage(idx int32) {
+	if w.polling == nil {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	w.polling(ctx, idx)
 }
