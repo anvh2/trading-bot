@@ -5,7 +5,7 @@ clean:
 	rm -f $(BIN)
 
 gen: 
-	buf generate -o ${HOME}/pkg
+	buf generate --path ./api -o ${HOME}/pkg
 
 go-vendor:
 	go mod tidy && go mod vendor
@@ -13,23 +13,11 @@ go-vendor:
 build: clean go-vendor
 	GOOS=linux GOARCH=amd64 go build -o $(BIN)
 
-rsync-crawler: build
-	rsync -avz $(BIN) config.* root@159.223.44.181:/server/$(BIN)/crawler
+docker:
+	docker build --no-cache --progress=plain -t analyzer:latest -f ./internal/servers/analyzer/Dockerfile .
+	docker build --no-cache --progress=plain -t crawler:latest -f ./internal/servers/crawler/Dockerfile .
+	docker build --no-cache --progress=plain -t notifier:latest -f ./internal/servers/notifier/Dockerfile .
+	docker build --no-cache --progress=plain -t trader:latest -f ./internal/servers/trader/Dockerfile .
 
-rsync-analyzer: build
-	rsync -avz $(BIN) config.* root@128.199.173.40:/server/$(BIN)/analyzer
-
-rsync-notifier: build
-	rsync -avz $(BIN) config.* root@159.223.67.54:/server/$(BIN)/notifier
-
-rsync-scripts:
-	rsync -avz runserver root@159.223.44.181:/server/$(BIN)/crawler
-	rsync -avz runserver root@128.199.173.40:/server/$(BIN)/analyzer
-	rsync -avz runserver root@159.223.67.54:/server/$(BIN)/notifier
-
-deploy: build
-	ssh root@165.22.103.161 sh /server/$(BIN)/runserver restart
-
-local:
-	rm -f tmp/server.log
-	go run main.go start --config config.dev.toml
+deploy:
+	docker-compose up --detach --build

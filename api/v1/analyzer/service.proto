@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package v1.analyzer;
+
+option go_package = "./api/v1/analyzer;analyzer";
+
+service AnalyzerService {
+    rpc Analyze(AnalyzeRequest) returns (AnalyzeResponse);
+}
+
+message AnalyzeRequest {
+    string symbol = 1;
+    int64 timestamp = 2;
+}
+
+message AnalyzeResponse {
+    string message = 1;
+}

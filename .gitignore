@@ -2,6 +2,6 @@
 Library
 .cache
 tmp
-.vscode
 logs
-deprecated
+.vscode
+.docker

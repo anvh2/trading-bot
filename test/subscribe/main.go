@@ -12,7 +12,7 @@ import (
 
 func main() {
 	redisCli := redis.NewClient(&redis.Options{
-		Addr:       "159.223.67.54:6379",
+		Addr:       ":6379",
 		DB:         1,
 		MaxRetries: 5,
 	})

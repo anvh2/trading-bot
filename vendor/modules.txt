@@ -15,7 +15,6 @@ github.com/bitly/go-simplejson
 github.com/cespare/xxhash/v2
 # github.com/cinar/indicator v1.2.24
 ## explicit; go 1.14
-github.com/cinar/indicator
 github.com/cinar/indicator/container
 github.com/cinar/indicator/container/bst
 # github.com/davecgh/go-spew v1.1.1
