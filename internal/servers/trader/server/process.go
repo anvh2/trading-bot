@@ -11,6 +11,9 @@ import (
 	"github.com/anvh2/trading-bot/internal/helpers"
 	"github.com/anvh2/trading-bot/internal/indicator"
 	"github.com/anvh2/trading-bot/internal/models"
+	"github.com/anvh2/trading-bot/pkg/api/v1/notifier"
+	"github.com/spf13/cast"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -33,6 +36,7 @@ func (s *Server) Process(ctx context.Context, data interface{}) error {
 	}
 
 	if checkExistPosition(openPositions) {
+		s.logger.Info("[Process] position existed", zap.String("symbol", message.Symbol), zap.Any("openPositions", openPositions))
 		return nil
 	}
 
@@ -43,6 +47,7 @@ func (s *Server) Process(ctx context.Context, data interface{}) error {
 	}
 
 	if len(openOrders) > 0 {
+		s.logger.Info("[Process] order existed", zap.String("symbol", message.Symbol), zap.Any("orders", openOrders))
 		return nil
 	}
 
@@ -73,7 +78,13 @@ func (s *Server) Process(ctx context.Context, data interface{}) error {
 		return err
 	}
 
-	// s.notifyBot.PushNotify(ctx, viper.GetInt64("notify.channels.orders_creation"), fmt.Sprintf("Create Orders Success: %s", message.Symbol))
+	channel := cast.ToString(viper.GetInt64("notify.channels.orders_creation"))
+	notifyMsg := fmt.Sprintf("Create orders with %s side for %s success.", helpers.ResolvePositionSide(message.GetRSI()), message.Symbol)
+	_, err = s.notifier.Push(ctx, &notifier.PushRequest{Channel: channel, Message: notifyMsg})
+	if err != nil {
+		s.logger.Error("[Process] failed to push notification", zap.Error(err))
+		return err
+	}
 
 	s.logger.Info("[Process] create order success", zap.Any("resp", resp))
 	return nil
@@ -188,7 +199,7 @@ func (s *Server) makeOrders(symbol string, currentPrice string, candles []*binan
 			PositionSide:     positionSide,
 			OrderType:        futures.OrderTypeLimit,
 			TimeInForce:      futures.TimeInForceTypeGTC,
-			Quantity:         helpers.AlignQuantityToString(calculateQuantity(entryPrice, 20), lotFilter.StepSize),
+			Quantity:         helpers.AlignQuantityToString(calculateQuantity(entryPrice, 30), lotFilter.StepSize),
 			Price:            helpers.AlignPriceToString(entryPrice, priceFilter.TickSize),
 			WorkingType:      futures.WorkingTypeMarkPrice,
 			NewOrderRespType: futures.NewOrderRespTypeRESULT,
@@ -199,7 +210,7 @@ func (s *Server) makeOrders(symbol string, currentPrice string, candles []*binan
 			PositionSide:     positionSide,
 			OrderType:        futures.OrderTypeLimit,
 			TimeInForce:      futures.TimeInForceTypeGTC,
-			Quantity:         helpers.AlignQuantityToString(calculateQuantity(entryPrice*1.03, 30), lotFilter.StepSize),
+			Quantity:         helpers.AlignQuantityToString(calculateQuantity(entryPrice*1.03, 40), lotFilter.StepSize),
 			Price:            helpers.AlignPriceToString(entryPrice*1.03, priceFilter.TickSize),
 			WorkingType:      futures.WorkingTypeMarkPrice,
 			NewOrderRespType: futures.NewOrderRespTypeRESULT,
@@ -210,7 +221,7 @@ func (s *Server) makeOrders(symbol string, currentPrice string, candles []*binan
 			PositionSide:     positionSide,
 			OrderType:        futures.OrderTypeLimit,
 			TimeInForce:      futures.TimeInForceTypeGTC,
-			Quantity:         helpers.AlignQuantityToString(calculateQuantity(entryPrice*1.03*1.03, 40), lotFilter.StepSize),
+			Quantity:         helpers.AlignQuantityToString(calculateQuantity(entryPrice*1.03*1.03, 50), lotFilter.StepSize),
 			Price:            helpers.AlignPriceToString(entryPrice*1.03*1.03, priceFilter.TickSize),
 			WorkingType:      futures.WorkingTypeMarkPrice,
 			NewOrderRespType: futures.NewOrderRespTypeRESULT,
@@ -222,7 +233,7 @@ func (s *Server) makeOrders(symbol string, currentPrice string, candles []*binan
 			PositionSide:     positionSide,
 			OrderType:        futures.OrderTypeTakeProfitMarket,
 			TimeInForce:      futures.TimeInForceTypeGTC,
-			Quantity:         helpers.AlignQuantityToString(calculateStopQuantity(entryPrice, 60), lotFilter.StepSize),
+			Quantity:         helpers.AlignQuantityToString(calculateStopQuantity(entryPrice, 120), lotFilter.StepSize),
 			StopPrice:        helpers.AlignPriceToString(takeProfitPrice, priceFilter.TickSize),
 			WorkingType:      futures.WorkingTypeMarkPrice,
 			NewOrderRespType: futures.NewOrderRespTypeRESULT,
@@ -234,7 +245,7 @@ func (s *Server) makeOrders(symbol string, currentPrice string, candles []*binan
 			PositionSide:     positionSide,
 			OrderType:        futures.OrderTypeStopMarket,
 			TimeInForce:      futures.TimeInForceTypeGTC,
-			Quantity:         helpers.AlignQuantityToString(calculateStopQuantity(entryPrice, 60), lotFilter.StepSize),
+			Quantity:         helpers.AlignQuantityToString(calculateStopQuantity(entryPrice, 120), lotFilter.StepSize),
 			StopPrice:        helpers.AlignPriceToString(stopLossPrice, priceFilter.TickSize),
 			WorkingType:      futures.WorkingTypeMarkPrice,
 			NewOrderRespType: futures.NewOrderRespTypeRESULT,

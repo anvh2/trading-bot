@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type Polling func(ctx context.Context, idx int32)
+type Polling func(ctx context.Context, idx int32) error
 type Process func(ctx context.Context, message interface{}) error
 
 type PoolConfig struct {

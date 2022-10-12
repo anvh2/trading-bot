@@ -68,7 +68,7 @@ func (s *Server) Process(ctx context.Context, data interface{}) error {
 		return errors.New("analyze: not ready to trade")
 	}
 
-	// s.publisher.Publish(ctx, "trading.channel.trading", "") // TODO: review data
+	s.publisher.Publish(ctx, "trading.channel.trading", oscillator.String())
 
 	msg := fmt.Sprintf("%s\t\t\t latest: -%0.4f(s)\n\t%s\n", message.Symbol, float64((time.Now().UnixMilli()-message.UpdateTime))/1000.0, helpers.ResolvePositionSide(oscillator.GetRSI()))
 

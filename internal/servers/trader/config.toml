@@ -1,6 +1,9 @@
 [trader]
   log_path = "./logs/trader.log"
 
+[notifier]
+  addr = "notifier:8080"
+
 [redis]
   addr = "redis:6379"
 

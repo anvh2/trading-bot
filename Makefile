@@ -21,3 +21,6 @@ docker:
 
 deploy:
 	docker-compose up --detach --build
+
+mock:
+	moq -pkg ntfmock -out ./pkg/api/v1/notifier/mock/service.mock.go ./pkg/api/v1/notifier NotifierServiceClient

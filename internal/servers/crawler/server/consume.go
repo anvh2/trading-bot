@@ -12,30 +12,38 @@ import (
 )
 
 func (s *Server) consume() error {
-	for _, interval := range viper.GetStringSlice("market.intervals") {
-		pair := make(map[string]string, len(s.exchange.Symbols()))
-		for _, symbol := range s.exchange.Symbols() {
-			pair[symbol] = interval
-		}
+	ready := make(chan bool)
 
-		go func() {
-			defer func() {
-				if r := recover(); r != nil {
-					s.logger.Error("[Consume] failed to start, recovered", zap.Any("error", r), zap.String("stacktrace", string(debug.Stack())))
-				}
-			}()
-
-			done, _, err := futures.WsCombinedKlineServe(pair, s.handleConsumeCandles, s.handleConsumeError)
-			if err != nil {
-				s.logger.Fatal("[Consume] failed to connect to klines stream data", zap.Error(err))
-				return
+	go func() {
+		for _, interval := range viper.GetStringSlice("market.intervals") {
+			pair := make(map[string]string, len(s.exchange.Symbols()))
+			for _, symbol := range s.exchange.Symbols() {
+				pair[symbol] = interval
 			}
 
-			<-done
-		}()
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						s.logger.Error("[Consume] failed to start, recovered", zap.Any("error", r), zap.String("stacktrace", string(debug.Stack())))
+					}
+				}()
 
-		time.Sleep(2 * time.Second)
-	}
+				done, _, err := futures.WsCombinedKlineServe(pair, s.handleConsumeCandles, s.handleConsumeError)
+				if err != nil {
+					s.logger.Fatal("[Consume] failed to connect to klines stream data", zap.Error(err))
+					return
+				}
+
+				<-done
+			}()
+
+			time.Sleep(2 * time.Second)
+		}
+
+		ready <- true
+	}()
+
+	<-ready
 
 	return nil
 }
@@ -92,5 +100,6 @@ func (s *Server) handleConsumeCandles(event *futures.WsKlineEvent) {
 }
 
 func (s *Server) handleConsumeError(err error) {
+
 	s.logger.Error("[Consume] failed to recieve data", zap.Error(err))
 }
