@@ -14,7 +14,8 @@ import (
 	"github.com/anvh2/trading-bot/internal/pubsub"
 	rpc_client "github.com/anvh2/trading-bot/internal/rpc/client"
 	"github.com/anvh2/trading-bot/internal/services/binance"
-	"github.com/anvh2/trading-bot/internal/worker"
+	storage "github.com/anvh2/trading-bot/internal/storage"
+	"github.com/anvh2/trading-bot/internal/storage/order"
 	"github.com/anvh2/trading-bot/pkg/api/v1/notifier"
 	"github.com/go-redis/redis/v8"
 	"github.com/spf13/viper"
@@ -23,15 +24,15 @@ import (
 
 type Server struct {
 	logger    *logger.Logger
+	order     storage.Order
 	binance   *binance.Binance
-	worker    *worker.Worker
 	exchange  cache.Exchange
 	subcriber pubsub.Subscriber
 	notifier  notifier.NotifierServiceClient
 }
 
 func New() *Server {
-	logger, err := logger.New(viper.GetString("trader.log_path"))
+	logger, err := logger.New(viper.GetString("commander.log_path"))
 	if err != nil {
 		log.Fatal("failed to init logger", err)
 	}
@@ -46,10 +47,7 @@ func New() *Server {
 		log.Fatal("failed to connect to redis", err)
 	}
 
-	worker, err := worker.New(logger, &worker.PoolConfig{NumProcess: 0, NumPolling: 2})
-	if err != nil {
-		log.Fatal("failed to new worker", zap.Error(err))
-	}
+	orderDb := order.New(logger, redisCli)
 
 	exchange := exchange.New(logger)
 
@@ -66,8 +64,8 @@ func New() *Server {
 
 	return &Server{
 		logger:    logger,
+		order:     orderDb,
 		binance:   binance,
-		worker:    worker,
 		exchange:  exchange,
 		subcriber: subciber,
 		notifier:  notifier,
@@ -75,7 +73,6 @@ func New() *Server {
 }
 
 func (s *Server) Start() error {
-	s.worker.WithPolling(s.Polling)
 	s.subcriber.Subscribe(context.Background(), "trading.channel.trading", s.Process)
 
 	sigs := make(chan os.Signal, 1)

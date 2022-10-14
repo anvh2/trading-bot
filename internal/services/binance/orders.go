@@ -10,27 +10,116 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 
-	"github.com/adshao/go-binance/v2/futures"
 	"github.com/anvh2/trading-bot/internal/models"
+	"github.com/anvh2/trading-bot/internal/services/binance/helpers"
 	"github.com/spf13/viper"
 )
 
-func (f *Binance) ListPositionRisk(ctx context.Context, symbol string) ([]*futures.PositionRisk, error) {
+func (f *Binance) ListPositionRisk(ctx context.Context, symbol string) ([]*Position, error) {
 	f.limiter.Wait(ctx)
-	return f.futures.NewGetPositionRiskService().Symbol(symbol).Do(ctx)
+
+	fullURL := fmt.Sprintf("%s/fapi/v2/positionRisk", viper.GetString("binance.config.order_url"))
+
+	params := &url.Values{
+		"symbol": []string{symbol},
+	}
+
+	signed, err := helpers.Signed(http.MethodGet, fullURL, params)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, signed.FullURL, signed.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	req = req.WithContext(ctx)
+	req.Header = signed.Header
+
+	resp, err := f.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("error: %v", resp.Status)
+	}
+
+	rawData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println(string(rawData))
+
+	isObject := len(rawData) > 0 && rawData[0] == '{' && rawData[len(rawData)-1] == '}'
+	if isObject {
+		position := &Position{}
+		json.Unmarshal(rawData, position)
+		return []*Position{position}, nil
+	}
+
+	res := make([]*Position, 0)
+	err = json.Unmarshal(rawData, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
-func (f *Binance) ListOpenOrders(ctx context.Context, symbol string) ([]*futures.Order, error) {
+func (f *Binance) ListOpenOrders(ctx context.Context, symbol string) ([]*Order, error) {
 	f.limiter.Wait(ctx)
-	return f.futures.NewListOpenOrdersService().Symbol(symbol).Do(ctx)
+
+	fullURL := fmt.Sprintf("%s/fapi/v1/openOrders", viper.GetString("binance.config.order_url"))
+
+	req, err := http.NewRequest(http.MethodGet, fullURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req = req.WithContext(ctx)
+
+	query := req.URL.Query()
+	query.Add("symbol", symbol)
+	query.Add("timestamp", fmt.Sprint(time.Now().UnixMilli()))
+
+	resp, err := f.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	rawData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	isObject := len(rawData) > 0 && rawData[0] == '{' && rawData[len(rawData)-1] == '}'
+	if isObject {
+		order := &Order{}
+		json.Unmarshal(rawData, order)
+		return []*Order{order}, nil
+	}
+
+	res := make([]*Order, 0)
+	err = json.Unmarshal(rawData, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (f *Binance) CreateOrders(ctx context.Context, orders []*models.Order) ([]*CreateOrderResp, error) {
 	f.limiter.Wait(ctx)
 
-	fullURL := fmt.Sprintf("%s/fapi/v1/batchOrders", viper.GetString("binance.config.futures.order_url")) // TODO: use testnet for test env
+	fullURL := fmt.Sprintf("%s/fapi/v1/batchOrders", viper.GetString("binance.config.order_url"))
 
 	ordersMap := make([]map[string]interface{}, len(orders))
 
@@ -101,10 +190,10 @@ func (f *Binance) CreateOrders(ctx context.Context, orders []*models.Order) ([]*
 	body := bytes.NewBufferString(bodyStr)
 
 	header := http.Header{}
-	header.Set("X-MBX-APIKEY", viper.GetString("binance.config.futures.api_key"))
+	header.Set("X-MBX-APIKEY", os.Getenv("ORDER_API_KEY"))
 	header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	mac := hmac.New(sha256.New, []byte(viper.GetString("binance.config.futures.secret_key")))
+	mac := hmac.New(sha256.New, []byte(os.Getenv("ORDER_SECRET_KEY")))
 	_, err = mac.Write([]byte(bodyStr))
 	if err != nil {
 		return nil, err
@@ -130,13 +219,12 @@ func (f *Binance) CreateOrders(ctx context.Context, orders []*models.Order) ([]*
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	rawData, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
-
-	defer resp.Body.Close()
 
 	isObject := len(rawData) > 0 && rawData[0] == '{' && rawData[len(rawData)-1] == '}'
 	if isObject {

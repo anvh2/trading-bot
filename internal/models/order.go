@@ -7,6 +7,7 @@ import (
 )
 
 type Order struct {
+	OrderId          string                   `json:"order_id,omitempty"`
 	Symbol           string                   `json:"symbol,omitempty"`
 	Side             futures.SideType         `json:"side,omitempty"`
 	PositionSide     futures.PositionSideType `json:"position_side,omitempty"`

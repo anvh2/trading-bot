@@ -15,13 +15,40 @@ import (
 
 func (f *Binance) GetExchangeInfo(ctx context.Context) (*futures.ExchangeInfo, error) {
 	f.limiter.Wait(ctx)
-	return f.futures.NewExchangeInfoService().Do(ctx)
+
+	fullURL := fmt.Sprintf("%s/fapi/v1/exchangeInfo", viper.GetString("binance.config.order_url"))
+
+	req, err := http.NewRequest(http.MethodGet, fullURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req = req.WithContext(ctx)
+
+	resp, err := f.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	rawData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &futures.ExchangeInfo{}
+	err = json.Unmarshal(rawData, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (f *Binance) GetCurrentPrice(ctx context.Context, symbol string) (*futures.SymbolPrice, error) {
 	f.limiter.Wait(ctx)
 
-	url := fmt.Sprintf("%s/fapi/v1/ticker/price?symbol=%s", viper.GetString("binance.config.futures.feed_url"), symbol)
+	url := fmt.Sprintf("%s/fapi/v1/ticker/price?symbol=%s", viper.GetString("binance.config.feed_url"), symbol)
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {

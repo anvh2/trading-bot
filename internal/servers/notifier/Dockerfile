@@ -26,4 +26,4 @@ RUN pwd && ls
 
 # expose some necessary port
 EXPOSE 8080
-ENTRYPOINT ["/app", "start", "--config", "config.toml"]
+ENTRYPOINT ["/app", "start", "--env", ".env", "--config", "config.toml"]

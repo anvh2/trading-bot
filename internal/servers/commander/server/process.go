@@ -11,6 +11,7 @@ import (
 	"github.com/anvh2/trading-bot/internal/helpers"
 	"github.com/anvh2/trading-bot/internal/indicator"
 	"github.com/anvh2/trading-bot/internal/models"
+	binancew "github.com/anvh2/trading-bot/internal/services/binance"
 	"github.com/anvh2/trading-bot/pkg/api/v1/notifier"
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
@@ -27,6 +28,11 @@ func (s *Server) Process(ctx context.Context, data interface{}) error {
 
 	if err := validateMessage(message); err != nil {
 		return err
+	}
+
+	if s.order.Exists(ctx, message.Symbol) {
+		s.logger.Info("[Process] symbol proceed", zap.String("symbol", message.Symbol))
+		return nil
 	}
 
 	openPositions, err := s.binance.ListPositionRisk(ctx, message.Symbol)
@@ -46,10 +52,12 @@ func (s *Server) Process(ctx context.Context, data interface{}) error {
 		return err
 	}
 
-	if len(openOrders) > 0 {
+	if checkExistOrder(openOrders) {
 		s.logger.Info("[Process] order existed", zap.String("symbol", message.Symbol), zap.Any("orders", openOrders))
 		return nil
 	}
+
+	s.logger.Info("orders and position", zap.Any("positions", openPositions), zap.Any("orders", openOrders))
 
 	symbolPrice, err := s.binance.GetCurrentPrice(ctx, message.Symbol)
 	if err != nil {
@@ -78,6 +86,8 @@ func (s *Server) Process(ctx context.Context, data interface{}) error {
 		return err
 	}
 
+	s.order.MSet(ctx, message.Symbol, orders...)
+
 	channel := cast.ToString(viper.GetInt64("notify.channels.orders_creation"))
 	notifyMsg := fmt.Sprintf("Create orders with %s side for %s success.", helpers.ResolvePositionSide(message.GetRSI()), message.Symbol)
 	_, err = s.notifier.Push(ctx, &notifier.PushRequest{Channel: channel, Message: notifyMsg})
@@ -97,9 +107,18 @@ func validateMessage(message *models.Oscillator) error {
 	return nil
 }
 
-func checkExistPosition(positions []*futures.PositionRisk) bool {
+func checkExistPosition(positions []*binancew.Position) bool {
 	for _, pos := range positions {
-		if pos.EntryPrice != "0.0" {
+		if pos.EntryPrice != "" && pos.EntryPrice != "0.0" {
+			return true
+		}
+	}
+	return false
+}
+
+func checkExistOrder(orders []*binancew.Order) bool {
+	for _, order := range orders {
+		if order.Symbol != "" {
 			return true
 		}
 	}

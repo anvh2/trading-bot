@@ -17,7 +17,7 @@ docker:
 	docker build --no-cache --progress=plain -t analyzer:latest -f ./internal/servers/analyzer/Dockerfile .
 	docker build --no-cache --progress=plain -t crawler:latest -f ./internal/servers/crawler/Dockerfile .
 	docker build --no-cache --progress=plain -t notifier:latest -f ./internal/servers/notifier/Dockerfile .
-	docker build --no-cache --progress=plain -t trader:latest -f ./internal/servers/trader/Dockerfile .
+	docker build --no-cache --progress=plain -t commander:latest -f ./internal/servers/commander/Dockerfile .
 
 deploy:
 	docker-compose up --detach --build

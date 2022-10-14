@@ -10,6 +10,7 @@ import (
 	rpc_server "github.com/anvh2/trading-bot/internal/rpc/server"
 	"github.com/anvh2/trading-bot/internal/services/binance"
 	"github.com/anvh2/trading-bot/internal/storage"
+	"github.com/anvh2/trading-bot/internal/storage/notify"
 	"github.com/anvh2/trading-bot/internal/worker"
 	"github.com/anvh2/trading-bot/pkg/api/v1/analyzer"
 	"github.com/anvh2/trading-bot/pkg/api/v1/notifier"
@@ -22,7 +23,7 @@ import (
 type Server struct {
 	logger     *logger.Logger
 	binance    *binance.Binance
-	notifyDb   *storage.Notify
+	notifyDb   storage.Notify
 	subscriber pubsub.Subscriber
 	publisher  pubsub.Publisher
 	worker     *worker.Worker
@@ -47,7 +48,7 @@ func New() *Server {
 
 	publisher := pubsub.New(logger, redisCli)
 	subscriber := pubsub.New(logger, redisCli)
-	notifyDb := storage.NewNotify(logger, redisCli)
+	notifyDb := notify.New(logger, redisCli)
 
 	worker, err := worker.New(logger, &worker.PoolConfig{NumProcess: 64})
 	if err != nil {

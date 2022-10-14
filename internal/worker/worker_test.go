@@ -21,6 +21,7 @@ import (
 	client "github.com/anvh2/trading-bot/internal/rpc/client"
 	rpc "github.com/anvh2/trading-bot/internal/rpc/server"
 	"github.com/anvh2/trading-bot/internal/storage"
+	"github.com/anvh2/trading-bot/internal/storage/notify"
 	"github.com/anvh2/trading-bot/pkg/api/v1/notifier"
 	"github.com/go-redis/redis/v8"
 	"github.com/spf13/cast"
@@ -32,7 +33,7 @@ import (
 
 var (
 	log       *logdev.Logger
-	notifyDb  *storage.Notify
+	notifyDb  storage.Notify
 	notifyCli notifier.NotifierServiceClient
 )
 
@@ -49,7 +50,7 @@ func TestWorker(t *testing.T) {
 		log.Fatal("failed to new redis cli", zap.Error(err))
 	}
 
-	notifyDb = storage.NewNotify(log, redisCli)
+	notifyDb = notify.New(log, redisCli)
 
 	conn, err := client.NewClient(":8080", client.WithInsecure())
 	if err != nil {

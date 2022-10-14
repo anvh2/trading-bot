@@ -69,12 +69,12 @@ services:
       - back-tier
     restart: always
 
-  trader:
-    container_name: trader
+  commander:
+    container_name: commander
     build:
       context: .
-      dockerfile: ./internal/servers/trader/Dockerfile
-    image: trader:latest
+      dockerfile: ./internal/servers/commander/Dockerfile
+    image: commander:latest
     depends_on:
       redis:
         condition: service_healthy 

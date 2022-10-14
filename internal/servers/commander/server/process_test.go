@@ -12,6 +12,7 @@ import (
 	"github.com/anvh2/trading-bot/internal/logger"
 	"github.com/anvh2/trading-bot/internal/models"
 	"github.com/anvh2/trading-bot/internal/services/binance"
+	storage "github.com/anvh2/trading-bot/internal/storage/mocks"
 	"github.com/anvh2/trading-bot/pkg/api/v1/notifier"
 	ntfmock "github.com/anvh2/trading-bot/pkg/api/v1/notifier/mock"
 	"github.com/spf13/viper"
@@ -35,6 +36,14 @@ func TestProcess(t *testing.T) {
 			server: &Server{
 				logger:  logger,
 				binance: binance.New(logger),
+				order: &storage.OrderMock{
+					ExistsFunc: func(ctx context.Context, symbol string) bool {
+						return false
+					},
+					MSetFunc: func(ctx context.Context, symbol string, orders ...*models.Order) error {
+						return nil
+					},
+				},
 				exchange: &cachemock.ExchangeMock{
 					GetFunc: func(symbol string) (*exchange.Symbol, error) {
 						return &exchange.Symbol{

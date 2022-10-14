@@ -1,5 +1,5 @@
-[analyzer]
-  log_path = "./logs/analyzer.log"
+[commander]
+  log_path = "./logs/commander.log"
 
 [notifier]
   addr = "notifier:8080"
@@ -9,6 +9,10 @@
 
 [market]
   intervals = ["30m", "1h", "4h", "1d"]
+
+[chart]
+  [chart.candles]
+    limit = 1000
 
 [binance]
   [binance.rate_limit]
@@ -23,5 +27,3 @@
     # futures_recommendation = -653827904
     futures_recommendation = -1001795149770
     orders_creation = -1001795149770
-  [notify.config]
-    expiration = "10m"

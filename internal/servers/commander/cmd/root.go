@@ -5,17 +5,21 @@ import (
 	"log"
 	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
+var (
+	cfgFile string
+	envFile string
+)
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:     "trading-bot-trader",
-	Short:   "trading-bot-trader service",
-	Long:    "trading-bot-trader service",
+	Use:     "trading-bot-commander",
+	Short:   "trading-bot-commander service",
+	Long:    "trading-bot-commander service",
 	Version: "0.0.0",
 }
 
@@ -38,6 +42,7 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
+	RootCmd.PersistentFlags().StringVar(&envFile, "env", "", "env file (default is .env)")
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is config.toml)")
 }
 
@@ -56,5 +61,10 @@ func initConfig() {
 		log.Fatalf("Cannot read config file: %s", err)
 	}
 
+	if err := godotenv.Load(envFile); err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+
+	fmt.Println("Using env file:", envFile)
 	fmt.Println("Using config file:", viper.ConfigFileUsed())
 }

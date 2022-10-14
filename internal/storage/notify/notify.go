@@ -1,4 +1,4 @@
-package storage
+package notify
 
 import (
 	"context"
@@ -24,7 +24,7 @@ type Notify struct {
 	db     *redis.Client
 }
 
-func NewNotify(logger *logger.Logger, db *redis.Client) *Notify {
+func New(logger *logger.Logger, db *redis.Client) *Notify {
 	return &Notify{
 		db:     db,
 		logger: logger,
