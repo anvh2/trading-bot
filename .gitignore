@@ -5,3 +5,4 @@ tmp
 logs
 .vscode
 .docker
+.env
