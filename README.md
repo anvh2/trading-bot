@@ -8,7 +8,6 @@
 > Note: go to api key management from Binance and create key only read for this bussiness.
 ```sh
 touch .env
-cat > LIVE_API_KEY=${api_key} \n LIVE_SECRET_KEY=${secret_key}
 ```
 
 ### Install softwares
