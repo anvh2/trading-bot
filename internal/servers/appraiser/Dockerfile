@@ -8,7 +8,7 @@ WORKDIR /build
 COPY . .
 
 # Build app
-RUN cd internal/servers/notifier/ \
+RUN cd internal/servers/appraiser/ \
     && mkdir artifacts \
     && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./app \
     && mv app config.toml artifacts \
@@ -18,7 +18,7 @@ RUN cd internal/servers/notifier/ \
 FROM alpine:3.14
 
 # Copy binary from builder
-COPY --from=builder /build/internal/servers/notifier/artifacts /
+COPY --from=builder /build/internal/servers/appraiser/artifacts /
 
 # Run server command
 ENV TZ Asia/Saigon

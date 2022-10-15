@@ -17,9 +17,9 @@ var (
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:     "trading-bot-notifier",
-	Short:   "trading-bot-notifier service",
-	Long:    "trading-bot-notifier service",
+	Use:     "trading-bot-appraiser",
+	Short:   "trading-bot-appraiser service",
+	Long:    "trading-bot-appraiser service",
 	Version: "0.0.0",
 }
 

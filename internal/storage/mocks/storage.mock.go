@@ -20,6 +20,9 @@ var _ storage.Order = &OrderMock{}
 //
 // 		// make and configure a mocked storage.Order
 // 		mockedOrder := &OrderMock{
+// 			AddQueueFunc: func(ctx context.Context, symbol string) error {
+// 				panic("mock out the AddQueue method")
+// 			},
 // 			CloseFunc: func()  {
 // 				panic("mock out the Close method")
 // 			},
@@ -35,6 +38,12 @@ var _ storage.Order = &OrderMock{}
 // 			MSetFunc: func(ctx context.Context, symbol string, orders ...*models.Order) error {
 // 				panic("mock out the MSet method")
 // 			},
+// 			PopQueueFunc: func(ctx context.Context) (string, error) {
+// 				panic("mock out the PopQueue method")
+// 			},
+// 			RemoveQueueFunc: func(ctx context.Context, symbol string) error {
+// 				panic("mock out the RemoveQueue method")
+// 			},
 // 			SetFunc: func(ctx context.Context, order *models.Order) error {
 // 				panic("mock out the Set method")
 // 			},
@@ -45,6 +54,9 @@ var _ storage.Order = &OrderMock{}
 //
 // 	}
 type OrderMock struct {
+	// AddQueueFunc mocks the AddQueue method.
+	AddQueueFunc func(ctx context.Context, symbol string) error
+
 	// CloseFunc mocks the Close method.
 	CloseFunc func()
 
@@ -60,11 +72,24 @@ type OrderMock struct {
 	// MSetFunc mocks the MSet method.
 	MSetFunc func(ctx context.Context, symbol string, orders ...*models.Order) error
 
+	// PopQueueFunc mocks the PopQueue method.
+	PopQueueFunc func(ctx context.Context) (string, error)
+
+	// RemoveQueueFunc mocks the RemoveQueue method.
+	RemoveQueueFunc func(ctx context.Context, symbol string) error
+
 	// SetFunc mocks the Set method.
 	SetFunc func(ctx context.Context, order *models.Order) error
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// AddQueue holds details about calls to the AddQueue method.
+		AddQueue []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Symbol is the symbol argument value.
+			Symbol string
+		}
 		// Close holds details about calls to the Close method.
 		Close []struct {
 		}
@@ -100,6 +125,18 @@ type OrderMock struct {
 			// Orders is the orders argument value.
 			Orders []*models.Order
 		}
+		// PopQueue holds details about calls to the PopQueue method.
+		PopQueue []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+		}
+		// RemoveQueue holds details about calls to the RemoveQueue method.
+		RemoveQueue []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Symbol is the symbol argument value.
+			Symbol string
+		}
 		// Set holds details about calls to the Set method.
 		Set []struct {
 			// Ctx is the ctx argument value.
@@ -108,12 +145,50 @@ type OrderMock struct {
 			Order *models.Order
 		}
 	}
-	lockClose  sync.RWMutex
-	lockExists sync.RWMutex
-	lockGet    sync.RWMutex
-	lockGetAll sync.RWMutex
-	lockMSet   sync.RWMutex
-	lockSet    sync.RWMutex
+	lockAddQueue    sync.RWMutex
+	lockClose       sync.RWMutex
+	lockExists      sync.RWMutex
+	lockGet         sync.RWMutex
+	lockGetAll      sync.RWMutex
+	lockMSet        sync.RWMutex
+	lockPopQueue    sync.RWMutex
+	lockRemoveQueue sync.RWMutex
+	lockSet         sync.RWMutex
+}
+
+// AddQueue calls AddQueueFunc.
+func (mock *OrderMock) AddQueue(ctx context.Context, symbol string) error {
+	if mock.AddQueueFunc == nil {
+		panic("OrderMock.AddQueueFunc: method is nil but Order.AddQueue was just called")
+	}
+	callInfo := struct {
+		Ctx    context.Context
+		Symbol string
+	}{
+		Ctx:    ctx,
+		Symbol: symbol,
+	}
+	mock.lockAddQueue.Lock()
+	mock.calls.AddQueue = append(mock.calls.AddQueue, callInfo)
+	mock.lockAddQueue.Unlock()
+	return mock.AddQueueFunc(ctx, symbol)
+}
+
+// AddQueueCalls gets all the calls that were made to AddQueue.
+// Check the length with:
+//     len(mockedOrder.AddQueueCalls())
+func (mock *OrderMock) AddQueueCalls() []struct {
+	Ctx    context.Context
+	Symbol string
+} {
+	var calls []struct {
+		Ctx    context.Context
+		Symbol string
+	}
+	mock.lockAddQueue.RLock()
+	calls = mock.calls.AddQueue
+	mock.lockAddQueue.RUnlock()
+	return calls
 }
 
 // Close calls CloseFunc.
@@ -287,6 +362,72 @@ func (mock *OrderMock) MSetCalls() []struct {
 	mock.lockMSet.RLock()
 	calls = mock.calls.MSet
 	mock.lockMSet.RUnlock()
+	return calls
+}
+
+// PopQueue calls PopQueueFunc.
+func (mock *OrderMock) PopQueue(ctx context.Context) (string, error) {
+	if mock.PopQueueFunc == nil {
+		panic("OrderMock.PopQueueFunc: method is nil but Order.PopQueue was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockPopQueue.Lock()
+	mock.calls.PopQueue = append(mock.calls.PopQueue, callInfo)
+	mock.lockPopQueue.Unlock()
+	return mock.PopQueueFunc(ctx)
+}
+
+// PopQueueCalls gets all the calls that were made to PopQueue.
+// Check the length with:
+//     len(mockedOrder.PopQueueCalls())
+func (mock *OrderMock) PopQueueCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockPopQueue.RLock()
+	calls = mock.calls.PopQueue
+	mock.lockPopQueue.RUnlock()
+	return calls
+}
+
+// RemoveQueue calls RemoveQueueFunc.
+func (mock *OrderMock) RemoveQueue(ctx context.Context, symbol string) error {
+	if mock.RemoveQueueFunc == nil {
+		panic("OrderMock.RemoveQueueFunc: method is nil but Order.RemoveQueue was just called")
+	}
+	callInfo := struct {
+		Ctx    context.Context
+		Symbol string
+	}{
+		Ctx:    ctx,
+		Symbol: symbol,
+	}
+	mock.lockRemoveQueue.Lock()
+	mock.calls.RemoveQueue = append(mock.calls.RemoveQueue, callInfo)
+	mock.lockRemoveQueue.Unlock()
+	return mock.RemoveQueueFunc(ctx, symbol)
+}
+
+// RemoveQueueCalls gets all the calls that were made to RemoveQueue.
+// Check the length with:
+//     len(mockedOrder.RemoveQueueCalls())
+func (mock *OrderMock) RemoveQueueCalls() []struct {
+	Ctx    context.Context
+	Symbol string
+} {
+	var calls []struct {
+		Ctx    context.Context
+		Symbol string
+	}
+	mock.lockRemoveQueue.RLock()
+	calls = mock.calls.RemoveQueue
+	mock.lockRemoveQueue.RUnlock()
 	return calls
 }
 

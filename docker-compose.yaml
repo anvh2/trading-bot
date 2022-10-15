@@ -87,6 +87,24 @@ services:
       - back-tier
     restart: always
 
+  appraiser:
+    container_name: appraiser
+    build:
+      context: .
+      dockerfile: ./internal/servers/appraiser/Dockerfile
+    image: appraiser:latest
+    depends_on:
+      redis:
+        condition: service_healthy 
+    volumes:
+      - "./logs:/logs"
+    ports:
+      - "5008:8080"
+      - "5009:8081"
+    networks:
+      - back-tier
+    restart: always
+
 volumes:
   data:
 

@@ -3,6 +3,7 @@ package order
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/anvh2/trading-bot/internal/logger"
 	"github.com/anvh2/trading-bot/internal/models"
@@ -11,7 +12,8 @@ import (
 )
 
 var (
-	keyOrders = "trading_bot.orders.%d"
+	keyOrders = "trading_bot.trading.orders.%d" // symbol
+	keyQueue  = "trading_bot.trading.queue.%s"  // date
 )
 
 type Order struct {
@@ -112,6 +114,48 @@ func (db *Order) Exists(ctx context.Context, symbol string) bool {
 
 	db.logger.Info("[Order][Exists] success to check", zap.String("symbol", symbol), zap.Int64("exists", exists))
 	return exists > 0
+}
+
+func (db *Order) AddQueue(ctx context.Context, symbol string) error {
+	date := time.Now().Format("060102")
+	key := fmt.Sprintf(keyQueue, date)
+
+	effected, err := db.db.SAdd(ctx, key, symbol).Result()
+	if err != nil {
+		db.logger.Error("[Order][AddQueue] failed", zap.String("symbol", symbol), zap.Error(err))
+		return err
+	}
+
+	db.logger.Info("[Order][AddQueue] success", zap.String("symbol", symbol), zap.Int64("effected", effected))
+	return nil
+}
+
+func (db *Order) RemoveQueue(ctx context.Context, symbol string) error {
+	date := time.Now().Format("060102")
+	key := fmt.Sprintf(keyQueue, date)
+
+	effected, err := db.db.SRem(ctx, key, symbol).Result()
+	if err != nil {
+		db.logger.Error("[Order][RemoveQueue] failed", zap.String("symbol", symbol), zap.Error(err))
+		return err
+	}
+
+	db.logger.Info("[Order][RemoveQueue] success", zap.String("symbol", symbol), zap.Int64("effected", effected))
+	return nil
+}
+
+func (db *Order) PopQueue(ctx context.Context) (string, error) {
+	date := time.Now().Format("060102")
+	key := fmt.Sprintf(keyQueue, date)
+
+	symbol, err := db.db.SPop(ctx, key).Result()
+	if err != nil {
+		db.logger.Error("[Order][RemoveQueue] failed", zap.String("symbol", symbol), zap.Error(err))
+		return "", err
+	}
+
+	db.logger.Info("[Order][RemoveQueue] success", zap.String("symbol", symbol), zap.String("symbol", symbol))
+	return symbol, nil
 }
 
 func (db *Order) Close() {

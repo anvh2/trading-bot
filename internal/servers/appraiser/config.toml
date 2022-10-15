@@ -1,7 +1,10 @@
-[notifier]
+[appraiser]
   host = ""
   port = 8080
-  log_path = "./logs/notifier.log"
+  log_path = "./logs/appraiser.log"
+
+[notifier]
+  addr = "notifier:8080"
 
 [redis]
   addr = "redis:6379"
@@ -21,6 +24,8 @@
     order_url = "https://testnet.binancefuture.com" # testnet
     feed_url = "https://fapi.binance.com" # real
 
-[telegram]
-  # trading_bot_token = "5629721774:AAH0Uq1xuqw7oKPSVQrNIDjeT8EgZgMuMZg"
-  trading_bot_token = "5392735903:AAHgMUpDqcKyiSbYLgVfZkKaOLjYPsLkgBs"
+[notify]
+  [notify.channels]
+    # futures_recommendation = -653827904
+    futures_recommendation = -1001795149770
+    orders_creation = -1001795149770

@@ -11,7 +11,8 @@ COPY . .
 RUN cd internal/servers/crawler/ \
     && mkdir artifacts \
     && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./app \
-    && mv app config.toml artifacts
+    && mv app config.toml artifacts \
+    && mv /build/.env artifacts
 
 # final stage
 FROM alpine:3.14

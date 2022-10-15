@@ -11,24 +11,49 @@ import (
 	"time"
 )
 
+type SignedType int8
+
+const (
+	SignedTypeInvalid = iota
+	SignedTypeTest
+	SignedTypeLive
+)
+
 type SignedData struct {
 	Body    *bytes.Buffer
 	Header  http.Header
 	FullURL string
 }
 
-func Signed(method string, fullURL string, params *url.Values) (*SignedData, error) {
+func Signed(method string, fullURL string, params *url.Values, signedType SignedType) (*SignedData, error) {
 	var (
 		bodyStr  string = ""
 		queryStr string = ""
 	)
 
-	if params != nil {
-		params.Set("timestamp", fmt.Sprint(time.Now().UnixMilli()))
+	if params == nil {
+		params = &url.Values{}
+	}
+
+	params.Set("timestamp", fmt.Sprint(time.Now().UnixMilli()))
+
+	var (
+		apiKey    string
+		secretKey string
+	)
+
+	switch signedType {
+	case SignedTypeTest:
+		apiKey = os.Getenv("TEST_API_KEY")
+		secretKey = os.Getenv("TEST_SECRET_KEY")
+
+	case SignedTypeLive:
+		apiKey = os.Getenv("LIVE_API_KEY")
+		secretKey = os.Getenv("LIVE_SECRET_KEY")
 	}
 
 	header := http.Header{}
-	header.Set("X-MBX-APIKEY", os.Getenv("ORDER_API_KEY"))
+	header.Set("X-MBX-APIKEY", apiKey)
 
 	if params != nil {
 		switch method {
@@ -41,7 +66,7 @@ func Signed(method string, fullURL string, params *url.Values) (*SignedData, err
 		}
 	}
 
-	mac := hmac.New(sha256.New, []byte(os.Getenv("ORDER_SECRET_KEY")))
+	mac := hmac.New(sha256.New, []byte(secretKey))
 	_, err := mac.Write([]byte(fmt.Sprintf("%s%s", queryStr, bodyStr)))
 	if err != nil {
 		return nil, err

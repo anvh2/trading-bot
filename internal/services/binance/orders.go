@@ -27,7 +27,7 @@ func (f *Binance) ListPositionRisk(ctx context.Context, symbol string) ([]*Posit
 		"symbol": []string{symbol},
 	}
 
-	signed, err := helpers.Signed(http.MethodGet, fullURL, params)
+	signed, err := helpers.Signed(http.MethodGet, fullURL, params, helpers.SignedTypeTest)
 	if err != nil {
 		return nil, err
 	}
@@ -54,8 +54,6 @@ func (f *Binance) ListPositionRisk(ctx context.Context, symbol string) ([]*Posit
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println(string(rawData))
 
 	isObject := len(rawData) > 0 && rawData[0] == '{' && rawData[len(rawData)-1] == '}'
 	if isObject {
@@ -190,10 +188,10 @@ func (f *Binance) CreateOrders(ctx context.Context, orders []*models.Order) ([]*
 	body := bytes.NewBufferString(bodyStr)
 
 	header := http.Header{}
-	header.Set("X-MBX-APIKEY", os.Getenv("ORDER_API_KEY"))
+	header.Set("X-MBX-APIKEY", os.Getenv("TEST_API_KEY"))
 	header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	mac := hmac.New(sha256.New, []byte(os.Getenv("ORDER_SECRET_KEY")))
+	mac := hmac.New(sha256.New, []byte(os.Getenv("TEST_SECRET_KEY")))
 	_, err = mac.Write([]byte(bodyStr))
 	if err != nil {
 		return nil, err

@@ -15,8 +15,9 @@ type Polling func(ctx context.Context, idx int32) error
 type Process func(ctx context.Context, message interface{}) error
 
 type PoolConfig struct {
-	NumProcess int32
-	NumPolling int32
+	NumProcess     int32
+	NumPolling     int32
+	PollingBackoff time.Duration
 }
 
 type Worker struct {
@@ -32,6 +33,14 @@ type Worker struct {
 func New(logger *logger.Logger, config *PoolConfig) (*Worker, error) {
 	if config == nil {
 		return nil, errors.New("worker: config invalid")
+	}
+
+	if config.NumPolling == 0 && config.NumProcess == 0 {
+		return nil, errors.New("worker: no process")
+	}
+
+	if config.PollingBackoff == 0 {
+		config.PollingBackoff = time.Second
 	}
 
 	buffer := config.NumProcess / 2
@@ -99,7 +108,7 @@ func (w *Worker) Start() error {
 
 				defer w.wait.Done()
 
-				ticker := time.NewTicker(time.Second)
+				ticker := time.NewTicker(w.config.PollingBackoff)
 
 				for {
 					select {

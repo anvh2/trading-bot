@@ -1,9 +1,19 @@
 version: "3"
 services:
   redis:
-    image: redis:alpine
+    container_name: redis-server
+    image: redis:6.2.7-alpine
+    volumes:
+      - "./healthchecks:/healthchecks"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: "5s"
+      retries: 3
+      timeout: "30s"
+    ports: 
+      - "6380:6379"
     networks:
-      - frontend
+      - back-tier
     deploy:
       replicas: 1
       update_config:
@@ -12,15 +22,21 @@ services:
       restart_policy:
         condition: on-failure
 
-  notifier:
-    image: trading-bot_notifier:latest
-    ports:
-      - 5000:8080
-    networks:
-      - frontend
-      - backend
+  analyzer:
+    container_name: analyzer
+    build:
+      context: .
+      dockerfile: ./internal/servers/analyzer/Dockerfile
+    image: analyzer:latest
     depends_on:
       - redis
+    volumes:
+      - "./logs:/logs"
+    ports:
+      - "5000:8080"
+      - "5001:8081"
+    networks:
+      - back-tier
     deploy:
       replicas: 2
       update_config:
@@ -28,9 +44,96 @@ services:
       restart_policy:
         condition: on-failure
 
-networks:
-  frontend:
-  backend:
+  crawler:
+    container_name: crawler
+    build:
+      context: .
+      dockerfile: ./internal/servers/crawler/Dockerfile
+    image: crawler:latest
+    depends_on:
+      - redis 
+    volumes:
+      - "./logs:/logs"
+    ports:
+      - "5002:8080"
+      - "5003:8081"
+    networks:
+      - back-tier
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 2
+      restart_policy:
+        condition: on-failure
+
+  notifier:
+    container_name: notifier
+    build:
+      context: .
+      dockerfile: ./internal/servers/notifier/Dockerfile
+    image: notifier:latest
+    depends_on:
+      - redis 
+    volumes:
+      - "./logs:/logs"
+    ports:
+      - "5004:8080"
+      - "5005:8081"
+    networks:
+      - back-tier
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 2
+      restart_policy:
+        condition: on-failure
+
+  commander:
+    container_name: commander
+    build:
+      context: .
+      dockerfile: ./internal/servers/commander/Dockerfile
+    image: commander:latest
+    depends_on:
+      - redis 
+    volumes:
+      - "./logs:/logs"
+    ports:
+      - "5006:8080"
+      - "5007:8081"
+    networks:
+      - back-tier
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 2
+      restart_policy:
+        condition: on-failure
+
+  appraiser:
+    container_name: appraiser
+    build:
+      context: .
+      dockerfile: ./internal/servers/appraiser/Dockerfile
+    image: appraiser:latest
+    depends_on:
+      - redis
+    volumes:
+      - "./logs:/logs"
+    ports:
+      - "5008:8080"
+      - "5009:8081"
+    networks:
+      - back-tier
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 2
+      restart_policy:
+        condition: on-failure
 
 volumes:
   data:
+
+networks:
+  back-tier:
