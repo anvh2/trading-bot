@@ -9,16 +9,12 @@ import (
 	"github.com/anvh2/trading-bot/internal/models"
 )
 
-type ChartMeta struct {
-	UpdateTime int64
-}
-
 type Chart struct {
 	mutex  *sync.RWMutex
-	symbol string                     // key of chart
-	cache  map[string]*circular.Cache // map[interval]candles
-	meta   *ChartMeta
-	limit  int32 // limit of candles's length
+	symbol string                           // key of chart
+	cache  map[string]*circular.Cache       // map[interval]candles
+	meta   map[string]*models.ChartMetadata // map[internval]meta
+	limit  int32                            // limit of candles's length
 }
 
 func (m *Chart) Init(symbol string, limit int32) *Chart {
@@ -26,7 +22,7 @@ func (m *Chart) Init(symbol string, limit int32) *Chart {
 		mutex:  &sync.RWMutex{},
 		symbol: symbol,
 		cache:  make(map[string]*circular.Cache),
-		meta:   &ChartMeta{},
+		meta:   make(map[string]*models.ChartMetadata),
 		limit:  limit,
 	}
 }
@@ -48,11 +44,12 @@ func (m *Chart) CreateCandle(interval string, candle *models.Candlestick) error 
 
 	if m.cache[interval] == nil {
 		m.cache[interval] = circular.New(m.limit)
+		m.meta[interval] = &models.ChartMetadata{
+			UpdateTime: time.Now().UnixMilli(),
+		}
 	}
 
 	m.cache[interval].Create(candle)
-	m.meta.UpdateTime = time.Now().UnixMilli()
-
 	return nil
 }
 
@@ -62,12 +59,16 @@ func (m *Chart) UpdateCandle(interval string, candleId int32, candle *models.Can
 
 	if m.cache[interval] == nil {
 		m.cache[interval] = circular.New(m.limit)
+		m.meta[interval] = &models.ChartMetadata{}
 	}
 
 	m.cache[interval].Update(candleId, candle)
-	m.meta.UpdateTime = time.Now().UnixMilli()
+	m.meta[interval].UpdateTime = time.Now().UnixMilli()
 }
 
-func (m *Chart) GetUpdateTime() int64 {
-	return m.meta.UpdateTime
+func (m *Chart) GetMetadata(interval string) *models.ChartMetadata {
+	if m.meta != nil && m.meta[interval] != nil {
+		return m.meta[interval]
+	}
+	return &models.ChartMetadata{}
 }

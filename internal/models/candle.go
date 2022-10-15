@@ -7,8 +7,8 @@ import (
 
 //CandleStick represents a single candlestick in a chart.
 type Candlestick struct {
-	OpenTime  int64  `json:"ot,omitempty"`
-	CloseTime int64  `json:"ct,omitempty"`
+	OpenTime  int64  `json:"s,omitempty"`
+	CloseTime int64  `json:"e,omitempty"`
 	High      string `json:"h,omitempty"`
 	Open      string `json:"o,omitempty"`
 	Close     string `json:"c,omitempty"`
@@ -22,13 +22,29 @@ func (cs *Candlestick) String() string {
 	return string(b)
 }
 
-type Chart struct {
-	Symbol     string                    `json:"symbol"`
-	Candles    map[string][]*Candlestick `json:"candlesticks"`
-	UpdateTime int64                     `json:"update_time"`
+type ChartMetadata struct {
+	UpdateTime int64 `json:"update_time"`
 }
 
-func (chart *Chart) String() string {
-	b, _ := json.Marshal(chart)
+type CandleChart struct {
+	Symbol   string                    `json:"symbol"`
+	Candles  map[string][]*Candlestick `json:"candlesticks"` // interval: []candle
+	Metadata map[string]*ChartMetadata `json:"metadata"`
+}
+
+func (c *CandleChart) String() string {
+	if c == nil {
+		return ""
+	}
+
+	b, _ := json.Marshal(c)
 	return string(b)
+}
+
+func (c *CandleChart) Len(interval string) int {
+	if c == nil {
+		return 0
+	}
+
+	return len(c.Candles[interval])
 }

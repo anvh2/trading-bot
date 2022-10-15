@@ -69,7 +69,7 @@ func TestWorker(t *testing.T) {
 		for range ticker.C {
 			for i := 0; i < 1000; i++ {
 				w.SendJob(context.Background(), func() string {
-					chart := &models.Chart{
+					chart := &models.CandleChart{
 						Symbol: "BTCUSDT",
 						// Candles: make(map[string][]*models.Candlestick),
 					}
@@ -106,7 +106,7 @@ func TestWorker(t *testing.T) {
 }
 
 func test_Process(ctx context.Context, data interface{}) error {
-	message := &models.Chart{}
+	message := &models.CandleChart{}
 
 	if err := json.Unmarshal([]byte(fmt.Sprint(data)), message); err != nil {
 		log.Error("[Process] failed to unmarshal message", zap.Error(err))
@@ -156,7 +156,7 @@ func test_Process(ctx context.Context, data interface{}) error {
 		return errors.New("analyze: not ready to trade")
 	}
 
-	msg := fmt.Sprintf("%s\t\t\t latest: -%0.4f(s)\n\t%s\n", message.Symbol, float64((time.Now().UnixMilli()-message.UpdateTime))/1000.0, helpers.ResolvePositionSide(oscillator.GetRSI()))
+	msg := fmt.Sprintf("%s\t\t\t latest: -%0.4f(s)\n\t%s\n", message.Symbol, float64((time.Now().UnixMilli()-message.Metadata["1h"].UpdateTime))/1000.0, helpers.ResolvePositionSide(oscillator.GetRSI()))
 
 	for _, interval := range viper.GetStringSlice("market.intervals") {
 		stoch, ok := oscillator.Stoch[interval]

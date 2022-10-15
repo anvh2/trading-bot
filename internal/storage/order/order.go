@@ -150,11 +150,11 @@ func (db *Order) PopQueue(ctx context.Context) (string, error) {
 
 	symbol, err := db.db.SPop(ctx, key).Result()
 	if err != nil {
-		db.logger.Error("[Order][RemoveQueue] failed", zap.String("symbol", symbol), zap.Error(err))
+		db.logger.Error("[Order][PopQueue] failed", zap.String("symbol", symbol), zap.Error(err))
 		return "", err
 	}
 
-	db.logger.Info("[Order][RemoveQueue] success", zap.String("symbol", symbol), zap.String("symbol", symbol))
+	db.logger.Info("[Order][PopQueue] success", zap.String("symbol", symbol), zap.String("symbol", symbol))
 	return symbol, nil
 }
 

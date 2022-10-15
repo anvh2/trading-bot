@@ -38,10 +38,10 @@ func (s *Server) produce() {
 						continue
 					}
 
-					message := &models.Chart{
-						Symbol:     symbol,
-						Candles:    make(map[string][]*models.Candlestick),
-						UpdateTime: chart.GetUpdateTime(),
+					message := &models.CandleChart{
+						Symbol:   symbol,
+						Candles:  make(map[string][]*models.Candlestick),
+						Metadata: make(map[string]*models.ChartMetadata),
 					}
 
 					for _, interval := range viper.GetStringSlice("market.intervals") {
@@ -62,6 +62,7 @@ func (s *Server) produce() {
 
 						if len(candlesticks) > 0 {
 							message.Candles[interval] = candlesticks
+							message.Metadata[interval] = chart.GetMetadata(interval)
 						}
 					}
 

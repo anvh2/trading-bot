@@ -6,3 +6,4 @@ logs
 .vscode
 .docker
 .env
+python

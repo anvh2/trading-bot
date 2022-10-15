@@ -28,7 +28,7 @@ type Server struct {
 	binance   *binance.Binance
 	market    cache.Market
 	exchange  cache.Exchange
-	message   chan *models.Chart
+	message   chan *models.CandleChart
 	retryCh   chan *models.Symbol
 	publisher pubsub.Publisher
 	quit      chan struct{}

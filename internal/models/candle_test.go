@@ -6,7 +6,7 @@ import (
 )
 
 func TestMarshalChart(t *testing.T) {
-	chart := &Chart{
+	chart := &CandleChart{
 		Symbol: "BTCUSDT",
 		Candles: map[string][]*Candlestick{
 			"1h": {
