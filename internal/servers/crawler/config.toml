@@ -5,7 +5,7 @@
   addr = "redis:6379"
 
 [market]
-  intervals = ["30m", "1h", "4h", "1d"]
+  intervals = ["5m", "30m", "1h"]
 
 [chart]
   [chart.candles]

@@ -6,17 +6,17 @@ import (
 	"net/http"
 	"sync"
 	"testing"
+	"time"
 
-	"github.com/spf13/viper"
 	"golang.org/x/time/rate"
 )
 
 func TestRateLimit(t *testing.T) {
-	viper.SetDefault("rate", "1m")
+	limiter := rate.NewLimiter(rate.Every(time.Minute), 1000)
 
-	limiter := rate.NewLimiter(rate.Every(viper.GetDuration("rate")), 1200)
-
+	client := &http.Client{}
 	wg := &sync.WaitGroup{}
+	start := time.Now()
 
 	for i := 0; i < 5000; i++ {
 		wg.Add(1)
@@ -32,14 +32,31 @@ func TestRateLimit(t *testing.T) {
 				return
 			}
 
-			client := &http.Client{}
-
 			res, err := client.Do(req)
 			if err != nil {
 				return
 			}
 
 			fmt.Println(res.Status)
+		}()
+	}
+
+	wg.Wait()
+	fmt.Println(time.Since(start).Seconds())
+}
+
+func TestRateLimiter(t *testing.T) {
+	limiter := rate.NewLimiter(rate.Every(time.Minute), 1200)
+
+	wg := &sync.WaitGroup{}
+
+	for i := 0; i < 5000; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			limiter.Wait(context.Background())
+
 		}()
 	}
 

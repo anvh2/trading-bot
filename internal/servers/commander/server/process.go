@@ -9,9 +9,9 @@ import (
 	"github.com/adshao/go-binance/v2"
 	"github.com/adshao/go-binance/v2/futures"
 	"github.com/anvh2/trading-bot/internal/helpers"
-	"github.com/anvh2/trading-bot/internal/indicator"
 	"github.com/anvh2/trading-bot/internal/models"
 	binancew "github.com/anvh2/trading-bot/internal/services/binance"
+	"github.com/anvh2/trading-bot/internal/talib"
 	"github.com/anvh2/trading-bot/pkg/api/v1/notifier"
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
@@ -130,7 +130,7 @@ func (s *Server) makeOrders(symbol string, currentPrice string, candles []*binan
 		return nil, errors.New("orders: empty stoch")
 	}
 
-	if !indicator.WithinRangeBound(stoch, indicator.RangeBoundReadyTrade) {
+	if !talib.WithinRangeBound(stoch, talib.RangeBoundReadyTrade) {
 		return nil, errors.New("orders: indicator not ready to trade")
 	}
 
@@ -139,7 +139,7 @@ func (s *Server) makeOrders(symbol string, currentPrice string, candles []*binan
 		closeSide futures.SideType
 	)
 
-	positionSide, err := indicator.ResolvePositionSide(stoch, indicator.RangeBoundReadyTrade)
+	positionSide, err := talib.ResolvePositionSide(stoch, talib.RangeBoundReadyTrade)
 	if err != nil {
 		return nil, err
 	}

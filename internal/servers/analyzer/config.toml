@@ -20,8 +20,8 @@
 
 [notify]
   [notify.channels]
-    # futures_recommendation = -653827904
-    futures_recommendation = -1001795149770
+    futures_recommendation = -653827904
+    # futures_recommendation = -1001795149770
     orders_creation = -1001795149770
   [notify.config]
     expiration = "10m"

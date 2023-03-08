@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/anvh2/trading-bot/internal/helpers"
-	"github.com/anvh2/trading-bot/internal/indicator"
 	"github.com/anvh2/trading-bot/internal/models"
+	"github.com/anvh2/trading-bot/internal/talib"
 	"github.com/anvh2/trading-bot/pkg/api/v1/notifier"
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
@@ -55,8 +55,8 @@ func (s *Server) Process(ctx context.Context, data interface{}) error {
 			close[idx] = c
 		}
 
-		_, rsi := indicator.RSIPeriod(14, close)
-		k, d, _ := indicator.KDJ(9, 3, 3, high, low, close)
+		_, rsi := talib.RSIPeriod(14, close)
+		k, d, _ := talib.KDJ(9, 3, 3, high, low, close)
 
 		stoch := &models.Stoch{
 			RSI: rsi[len(rsi)-1],
@@ -67,7 +67,7 @@ func (s *Server) Process(ctx context.Context, data interface{}) error {
 		oscillator.Stoch[interval] = stoch
 	}
 
-	if !indicator.WithinRangeBound(oscillator.Stoch["1h"], indicator.RangeBoundRecommend) {
+	if !talib.WithinRangeBound(oscillator.Stoch["1h"], talib.RangeBoundRecommend) {
 		return errors.New("analyze: not ready to trade")
 	}
 

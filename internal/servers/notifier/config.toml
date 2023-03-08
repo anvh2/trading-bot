@@ -22,5 +22,4 @@
     feed_url = "https://fapi.binance.com" # real
 
 [telegram]
-  # trading_bot_token = "5629721774:AAH0Uq1xuqw7oKPSVQrNIDjeT8EgZgMuMZg"
-  trading_bot_token = "5392735903:AAHgMUpDqcKyiSbYLgVfZkKaOLjYPsLkgBs"
+  trading_bot_token = "5948925858:AAGLTX4TFvLW5PoZlY8SGQdw7mYuq57TKLw"

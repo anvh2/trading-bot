@@ -1,4 +1,4 @@
-package indicator
+package talib
 
 import "github.com/cinar/indicator/container/bst"
 

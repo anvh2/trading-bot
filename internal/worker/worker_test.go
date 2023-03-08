@@ -15,13 +15,13 @@ import (
 	"time"
 
 	"github.com/anvh2/trading-bot/internal/helpers"
-	"github.com/anvh2/trading-bot/internal/indicator"
 	logdev "github.com/anvh2/trading-bot/internal/logger"
 	"github.com/anvh2/trading-bot/internal/models"
 	client "github.com/anvh2/trading-bot/internal/rpc/client"
 	rpc "github.com/anvh2/trading-bot/internal/rpc/server"
 	"github.com/anvh2/trading-bot/internal/storage"
 	"github.com/anvh2/trading-bot/internal/storage/notify"
+	"github.com/anvh2/trading-bot/internal/talib"
 	"github.com/anvh2/trading-bot/pkg/api/v1/notifier"
 	"github.com/go-redis/redis/v8"
 	"github.com/spf13/cast"
@@ -140,8 +140,8 @@ func test_Process(ctx context.Context, data interface{}) error {
 			close[idx] = c
 		}
 
-		_, rsi := indicator.RSIPeriod(14, close)
-		k, d, _ := indicator.KDJ(9, 3, 3, high, low, close)
+		_, rsi := talib.RSIPeriod(14, close)
+		k, d, _ := talib.KDJ(9, 3, 3, high, low, close)
 
 		stoch := &models.Stoch{
 			RSI: rsi[len(rsi)-1],
@@ -152,7 +152,7 @@ func test_Process(ctx context.Context, data interface{}) error {
 		oscillator.Stoch[interval] = stoch
 	}
 
-	if !indicator.WithinRangeBound(oscillator.Stoch["1h"], indicator.RangeBoundRecommend) {
+	if !talib.WithinRangeBound(oscillator.Stoch["1h"], talib.RangeBoundRecommend) {
 		return errors.New("analyze: not ready to trade")
 	}
 

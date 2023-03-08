@@ -71,16 +71,16 @@ func (s *Server) Start() error {
 	ready := make(chan bool)
 
 	go func() {
-		s.retry()
+		// s.retry()
 		s.crawl()
-		s.consume()
+		// s.consume()
 		ready <- true
 	}()
 
 	go func() {
 		<-ready
-		s.produce()
-		s.refresh()
+		// s.produce()
+		// s.refresh()
 	}()
 
 	sigs := make(chan os.Signal, 1)
